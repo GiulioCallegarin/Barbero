@@ -1,3 +1,6 @@
+import 'package:barbero/screens/appointments_screen.dart';
+import 'package:barbero/screens/clients_screen.dart';
+import 'package:barbero/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -15,9 +18,9 @@ class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
 
   static const List<Widget> _widgetOptions = <Widget>[
-    Center(child: Text('Index 0: Home')),
-    Center(child: Text('Index 1: Business')),
-    Center(child: Text('Index 2: School')),
+    HomeScreen(),
+    AppointmentsScreen(),
+    ClientsScreen(),
   ];
 
   @override
