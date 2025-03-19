@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class ClientsScreen extends StatelessWidget {
-  const ClientsScreen({super.key});
+class ClientsPage extends StatelessWidget {
+  const ClientsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
