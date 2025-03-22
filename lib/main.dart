@@ -1,6 +1,7 @@
 import 'package:barbero/app_router.dart';
 import 'package:barbero/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -15,6 +16,8 @@ void main() async {
 
 Future<void> init() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  await Hive.openBox('settings');
 }
 
 class MyApp extends StatelessWidget {
