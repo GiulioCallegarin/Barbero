@@ -74,21 +74,33 @@ class _ClientsPageState extends State<ClientsPage> {
               final client = box.getAt(index)!;
               final clientKey = box.keyAt(index); // Get Hive key
 
-              return ListTile(
-                title: Text("${client.firstName} ${client.lastName}"),
-                subtitle: Text(client.phoneNumber),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => _addOrEditClient(client),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteClient(clientKey),
-                    ),
-                  ],
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ListTile(
+                  title: Text("${client.firstName} ${client.lastName}"),
+                  subtitle: Text("${client.address}\n${client.phoneNumber}"),
+                  leading: Icon(
+                    client.gender == 'male'
+                        ? Icons.man_outlined
+                        : Icons.woman_outlined,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  tileColor: Theme.of(context).colorScheme.secondary,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () => _addOrEditClient(client),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _deleteClient(clientKey),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

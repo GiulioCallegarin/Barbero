@@ -91,21 +91,41 @@ class _ClientDialogState extends State<ClientDialog> {
             ),
 
             // Gender Selection
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children:
-                  ["male", "female"].map((gender) {
-                    return ElevatedButton(
-                      onPressed: () => setState(() => _selectedGender = gender),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            _selectedGender == gender
-                                ? Colors.blue
-                                : Colors.grey,
-                      ),
-                      child: Text(gender),
-                    );
-                  }).toList(),
+            const SizedBox(height: 20),
+            const Text("Gender"),
+            const SizedBox(height: 10),
+            SizedBox(
+              child: ToggleButtons(
+                isSelected: [
+                  _selectedGender == "male",
+                  _selectedGender == "female",
+                ],
+                onPressed: (index) {
+                  setState(() {
+                    _selectedGender = ["male", "female"][index];
+                  });
+                },
+                borderRadius: BorderRadius.circular(10.0),
+                constraints: const BoxConstraints(minHeight: 50, minWidth: 100),
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.man_outlined),
+                      const SizedBox(width: 8.0),
+                      const Text("Male"),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.woman_outlined),
+                      const SizedBox(width: 8.0),
+                      const Text("Female"),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -115,7 +135,13 @@ class _ClientDialogState extends State<ClientDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text("Cancel"),
         ),
-        ElevatedButton(onPressed: _saveClient, child: const Text("Save")),
+        ElevatedButton(
+          onPressed: _saveClient,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
+          ),
+          child: const Text("Save"),
+        ),
       ],
     );
   }

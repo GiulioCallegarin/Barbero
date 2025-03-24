@@ -96,8 +96,9 @@ class _AppointmentTypeDialogState extends State<AppointmentTypeDialog> {
             ),
             keyboardType: TextInputType.number,
           ),
+          const SizedBox(height: 20),
+          const Text("Gender"),
           const SizedBox(height: 10),
-          const Text("Target Gender"),
           ToggleButtons(
             isSelected: [
               _selectedTarget == "male",
@@ -109,18 +110,20 @@ class _AppointmentTypeDialogState extends State<AppointmentTypeDialog> {
                 _selectedTarget = ["male", "female", "all"][index];
               });
             },
+            borderRadius: BorderRadius.circular(10.0),
+            constraints: const BoxConstraints(minHeight: 50, minWidth: 75),
             children: const [
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text("male"),
+                child: Text("Male"),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text("female"),
+                child: Text("Female"),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text("all"),
+                child: Text("All"),
               ),
             ],
           ),
@@ -133,6 +136,9 @@ class _AppointmentTypeDialogState extends State<AppointmentTypeDialog> {
         ),
         ElevatedButton(
           onPressed: saveAppointmentType,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
+          ),
           child: const Text('Save'),
         ),
       ],

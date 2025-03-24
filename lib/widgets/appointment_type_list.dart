@@ -40,27 +40,41 @@ class AppointmentTypeList extends StatelessWidget {
             itemBuilder: (context, index) {
               final key = box.keyAt(index) as int;
               final appointmentType = box.get(key)!;
-              return ListTile(
-                title: Text(appointmentType.name),
-                subtitle: Text(
-                  "Price: €${appointmentType.defaultPrice} | Duration: ${appointmentType.defaultDuration} mins",
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed:
-                          () => showAddAppointmentTypeDialog(
-                            context,
-                            type: appointmentType,
-                          ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => deleteAppointmentType(key),
-                    ),
-                  ],
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ListTile(
+                  title: Text(appointmentType.name),
+                  subtitle: Text(
+                    "Price: €${appointmentType.defaultPrice} | Duration: ${appointmentType.defaultDuration} mins",
+                  ),
+                  leading: Icon(
+                    appointmentType.target == 'all'
+                        ? Icons.circle_outlined
+                        : appointmentType.target == 'male'
+                        ? Icons.man_outlined
+                        : Icons.woman_outlined,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  tileColor: Theme.of(context).colorScheme.secondary,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed:
+                            () => showAddAppointmentTypeDialog(
+                              context,
+                              type: appointmentType,
+                            ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => deleteAppointmentType(key),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
