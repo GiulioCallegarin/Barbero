@@ -1,3 +1,4 @@
+import 'package:barbero/pages/client_history_page.dart';
 import 'package:barbero/widgets/client_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:barbero/models/client.dart';
@@ -12,6 +13,7 @@ class ClientsPage extends StatefulWidget {
 
 class _ClientsPageState extends State<ClientsPage> {
   late Box<Client> clientBox;
+  String searchQuery = "";
 
   @override
   void initState() {
@@ -44,9 +46,9 @@ class _ClientsPageState extends State<ClientsPage> {
                   Navigator.pop(context);
                   setState(() {}); // Refresh UI after deleting
                 },
-                child: const Text(
+                child: Text(
                   "Delete",
-                  style: TextStyle(color: Colors.red),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
             ],
@@ -57,7 +59,29 @@ class _ClientsPageState extends State<ClientsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Clients')),
+      appBar: AppBar(
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(20),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: "Search clients...",
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                filled: true,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value.toLowerCase();
+                });
+              },
+            ),
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addOrEditClient(),
         child: const Icon(Icons.add),
@@ -68,11 +92,23 @@ class _ClientsPageState extends State<ClientsPage> {
           if (box.isEmpty) {
             return const Center(child: Text("No Clients"));
           }
+
+          final filteredClients =
+              box.values.where((client) {
+                final name =
+                    "${client.firstName} ${client.lastName}".toLowerCase();
+                return name.contains(searchQuery);
+              }).toList();
+
+          if (filteredClients.isEmpty) {
+            return const Center(child: Text("No matching clients"));
+          }
+
           return ListView.builder(
-            itemCount: box.length,
+            itemCount: filteredClients.length,
             itemBuilder: (context, index) {
-              final client = box.getAt(index)!;
-              final clientKey = box.keyAt(index); // Get Hive key
+              final client = filteredClients[index];
+              final clientKey = box.keyAt(index);
 
               return Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -96,11 +132,22 @@ class _ClientsPageState extends State<ClientsPage> {
                         onPressed: () => _addOrEditClient(client),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
+                        icon: Icon(
+                          Icons.delete,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                         onPressed: () => _deleteClient(clientKey),
                       ),
                     ],
                   ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ClientHistoryPage(client: client),
+                      ),
+                    );
+                  },
                 ),
               );
             },

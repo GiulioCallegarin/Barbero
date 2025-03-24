@@ -22,8 +22,33 @@ class AppointmentTypeList extends StatelessWidget {
     );
   }
 
-  void deleteAppointmentType(int id) {
-    appointmentTypeBox.delete(id);
+  void _deleteAppointmentType(BuildContext context, int id) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Delete Appointment Type"),
+            content: const Text(
+              "Are you sure you want to delete this appointment type?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () {
+                  appointmentTypeBox.delete(id);
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  "Delete",
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -45,14 +70,14 @@ class AppointmentTypeList extends StatelessWidget {
                 child: ListTile(
                   title: Text(appointmentType.name),
                   subtitle: Text(
-                    "Price: €${appointmentType.defaultPrice} | Duration: ${appointmentType.defaultDuration} mins",
+                    "Price: €${appointmentType.defaultPrice}\nDuration: ${appointmentType.defaultDuration} mins",
                   ),
                   leading: Icon(
                     appointmentType.target == 'all'
                         ? Icons.circle_outlined
                         : appointmentType.target == 'male'
-                        ? Icons.man_outlined
-                        : Icons.woman_outlined,
+                        ? Icons.male_outlined
+                        : Icons.female_outlined,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -70,8 +95,11 @@ class AppointmentTypeList extends StatelessWidget {
                             ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => deleteAppointmentType(key),
+                        icon: Icon(
+                          Icons.delete,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        onPressed: () => _deleteAppointmentType(context, key),
                       ),
                     ],
                   ),
