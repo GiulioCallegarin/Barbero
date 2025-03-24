@@ -21,13 +21,14 @@ class AppointmentTypeAdapter extends TypeAdapter<AppointmentType> {
       name: fields[1] as String,
       defaultPrice: (fields[2] as num).toDouble(),
       defaultDuration: (fields[3] as num).toInt(),
+      target: fields[4] == null ? 'all' : fields[4] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppointmentType obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class AppointmentTypeAdapter extends TypeAdapter<AppointmentType> {
       ..writeByte(2)
       ..write(obj.defaultPrice)
       ..writeByte(3)
-      ..write(obj.defaultDuration);
+      ..write(obj.defaultDuration)
+      ..writeByte(4)
+      ..write(obj.target);
   }
 
   @override

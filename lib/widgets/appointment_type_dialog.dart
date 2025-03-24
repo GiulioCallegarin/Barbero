@@ -20,6 +20,7 @@ class _AppointmentTypeDialogState extends State<AppointmentTypeDialog> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _durationController = TextEditingController();
+  String _selectedTarget = "all"; // Default value
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _AppointmentTypeDialogState extends State<AppointmentTypeDialog> {
       _priceController.text = widget.appointmentType!.defaultPrice.toString();
       _durationController.text =
           widget.appointmentType!.defaultDuration.toString();
+      _selectedTarget = widget.appointmentType!.target;
     }
   }
 
@@ -49,6 +51,7 @@ class _AppointmentTypeDialogState extends State<AppointmentTypeDialog> {
         name: _nameController.text,
         defaultPrice: double.parse(_priceController.text),
         defaultDuration: int.parse(_durationController.text),
+        target: _selectedTarget, // Save selected gender
       );
       widget.box.put(newId, newType);
     } else {
@@ -59,6 +62,7 @@ class _AppointmentTypeDialogState extends State<AppointmentTypeDialog> {
       widget.appointmentType!.defaultDuration = int.parse(
         _durationController.text,
       );
+      widget.appointmentType!.target = _selectedTarget; // Update target
       widget.appointmentType!.save();
     }
 
@@ -91,6 +95,34 @@ class _AppointmentTypeDialogState extends State<AppointmentTypeDialog> {
               labelText: 'Default Duration (mins)',
             ),
             keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 10),
+          const Text("Target Gender"),
+          ToggleButtons(
+            isSelected: [
+              _selectedTarget == "male",
+              _selectedTarget == "female",
+              _selectedTarget == "all",
+            ],
+            onPressed: (index) {
+              setState(() {
+                _selectedTarget = ["male", "female", "all"][index];
+              });
+            },
+            children: const [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Text("male"),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Text("female"),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Text("all"),
+              ),
+            ],
           ),
         ],
       ),

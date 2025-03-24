@@ -19,7 +19,7 @@ class _ClientDialogState extends State<ClientDialog> {
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
-  String _selectedGender = "Male";
+  String _selectedGender = "male";
 
   @override
   void initState() {
@@ -94,7 +94,7 @@ class _ClientDialogState extends State<ClientDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children:
-                  ["Male", "Female", "Other"].map((gender) {
+                  ["male", "female"].map((gender) {
                     return ElevatedButton(
                       onPressed: () => setState(() => _selectedGender = gender),
                       style: ElevatedButton.styleFrom(
