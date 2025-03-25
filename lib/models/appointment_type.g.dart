@@ -21,7 +21,7 @@ class AppointmentTypeAdapter extends TypeAdapter<AppointmentType> {
       name: fields[1] as String,
       defaultPrice: (fields[2] as num).toDouble(),
       defaultDuration: (fields[3] as num).toInt(),
-      target: fields[4] == null ? 'all' : fields[4] as String,
+      target: fields[4] as String,
     );
   }
 

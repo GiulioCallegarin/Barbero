@@ -1,5 +1,5 @@
 import 'package:barbero/pages/client_history_page.dart';
-import 'package:barbero/widgets/client_dialog.dart';
+import 'package:barbero/pages/editing/edit_client_page.dart';
 import 'package:flutter/material.dart';
 import 'package:barbero/models/client.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -22,10 +22,12 @@ class _ClientsPageState extends State<ClientsPage> {
   }
 
   void _addOrEditClient([Client? client]) {
-    showDialog(
-      context: context,
-      builder: (context) => ClientDialog(client: client, box: clientBox),
-    ).then((_) => setState(() {})); // Refresh UI
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditClientPage(client: client, box: clientBox),
+      ),
+    );
   }
 
   void _deleteClient(int key) {
@@ -128,7 +130,10 @@ class _ClientsPageState extends State<ClientsPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        icon: Icon(
+                          Icons.edit,
+                          color: Theme.of(context).colorScheme.inversePrimary,
+                        ),
                         onPressed: () => _addOrEditClient(client),
                       ),
                       IconButton(

@@ -21,20 +21,21 @@ class AppointmentAdapter extends TypeAdapter<Appointment> {
       date: fields[1] as DateTime,
       clientId: (fields[2] as num).toInt(),
       appointmentTypeId: (fields[3] as num).toInt(),
-      price: (fields[4] as num).toDouble(),
-      duration: (fields[5] as num).toInt(),
-      notes: fields[6] as String?,
+      appointmentType: fields[4] as String,
+      price: (fields[5] as num).toDouble(),
+      duration: (fields[6] as num).toInt(),
+      notes: fields[7] as String?,
       status:
-          fields[7] == null
+          fields[8] == null
               ? AppointmentStatus.pending
-              : fields[7] as AppointmentStatus,
+              : fields[8] as AppointmentStatus,
     );
   }
 
   @override
   void write(BinaryWriter writer, Appointment obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,12 +45,14 @@ class AppointmentAdapter extends TypeAdapter<Appointment> {
       ..writeByte(3)
       ..write(obj.appointmentTypeId)
       ..writeByte(4)
-      ..write(obj.price)
+      ..write(obj.appointmentType)
       ..writeByte(5)
-      ..write(obj.duration)
+      ..write(obj.price)
       ..writeByte(6)
-      ..write(obj.notes)
+      ..write(obj.duration)
       ..writeByte(7)
+      ..write(obj.notes)
+      ..writeByte(8)
       ..write(obj.status);
   }
 

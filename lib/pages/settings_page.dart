@@ -1,4 +1,4 @@
-import 'package:barbero/widgets/appointment_type_dialog.dart';
+import 'package:barbero/pages/editing/edit_appointment_type_page.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
@@ -42,10 +42,13 @@ class SettingsPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed:
-            () => showDialog(
-              context: context,
-              builder:
-                  (context) => AppointmentTypeDialog(box: appointmentTypeBox),
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) =>
+                        EditAppointmentTypePage(box: appointmentTypeBox),
+              ),
             ),
         child: const Icon(Icons.add),
       ),

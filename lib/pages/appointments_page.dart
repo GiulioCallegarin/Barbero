@@ -1,3 +1,4 @@
+import 'package:barbero/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -13,12 +14,14 @@ class AppointmentsPage extends StatefulWidget {
 
 class _AppointmentsPageState extends State<AppointmentsPage> {
   late Box<Appointment> appointmentBox;
+  late Box<Client> clientBox;
   DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     appointmentBox = Hive.box<Appointment>('appointments');
+    clientBox = Hive.box<Client>('clients');
   }
 
   List<Appointment> _getAppointmentsForDay(DateTime day) {
@@ -30,14 +33,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   }
 
   void _addAppointment() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AppointmentDialog(
-            selectedDate: _selectedDate,
-            box: appointmentBox,
-          ),
-    );
+    showDialog(context: context, builder: (context) => AppointmentDialog());
   }
 
   @override
@@ -64,22 +60,17 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                   itemCount: appointments.length,
                   itemBuilder: (context, index) {
                     final appointment = appointments[index];
+                    final client = clientBox.get(appointment.clientId);
                     return ListTile(
-                      title: Text("Client ID: ${appointment.clientId}"),
-                      subtitle: Text(
-                        "Time: ${appointment.date.hour}:${appointment.date.minute}",
+                      title: Text(
+                        "${appointment.date.hour}:${appointment.date.minute} - ${client?.firstName} ${client?.lastName} ",
                       ),
-                      trailing: Text("\$${appointment.price}"),
+                      subtitle: Text(appointment.appointmentType),
+                      trailing: Text("€${appointment.price}"),
                       onTap: () {
                         showDialog(
                           context: context,
-                          builder:
-                              (context) => AppointmentDialog(
-                                selectedDate: _selectedDate,
-                                box: appointmentBox,
-                                appointment:
-                                    appointment, // Pass appointment for editing
-                              ),
+                          builder: (context) => AppointmentDialog(),
                         );
                       },
                     );

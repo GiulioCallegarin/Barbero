@@ -17,15 +17,18 @@ class Appointment extends HiveObject {
   late int appointmentTypeId;
 
   @HiveField(4)
-  late double price;
+  late String appointmentType;
 
   @HiveField(5)
-  late int duration;
+  late double price;
 
   @HiveField(6)
-  late String? notes;
+  late int duration;
 
   @HiveField(7)
+  late String? notes;
+
+  @HiveField(8)
   late AppointmentStatus status = AppointmentStatus.pending;
 
   Appointment({
@@ -33,6 +36,7 @@ class Appointment extends HiveObject {
     required this.date,
     required this.clientId,
     required this.appointmentTypeId,
+    required this.appointmentType,
     required this.price,
     required this.duration,
     this.notes,

@@ -169,7 +169,7 @@ class ClientHistoryPageState extends State<ClientHistoryPage> {
                               ).format(appointment.date),
                             ),
                             subtitle: Text(
-                              "Type: ${appointment.appointmentTypeId.toString()}",
+                              "Type: ${appointment.appointmentType}",
                             ),
                             trailing: Column(
                               mainAxisSize: MainAxisSize.min,

@@ -1,6 +1,6 @@
+import 'package:barbero/pages/editing/edit_appointment_type_page.dart';
 import 'package:flutter/material.dart';
 import 'package:barbero/models/appointment_type.dart';
-import 'package:barbero/widgets/appointment_type_dialog.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 
 class AppointmentTypeList extends StatelessWidget {
@@ -12,13 +12,15 @@ class AppointmentTypeList extends StatelessWidget {
     BuildContext context, {
     AppointmentType? type,
   }) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AppointmentTypeDialog(
-            appointmentType: type,
-            box: appointmentTypeBox,
-          ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => EditAppointmentTypePage(
+              box: appointmentTypeBox,
+              appointmentType: type,
+            ),
+      ),
     );
   }
 
@@ -87,7 +89,10 @@ class AppointmentTypeList extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        icon: Icon(
+                          Icons.edit,
+                          color: Theme.of(context).colorScheme.inversePrimary,
+                        ),
                         onPressed:
                             () => showAddAppointmentTypeDialog(
                               context,

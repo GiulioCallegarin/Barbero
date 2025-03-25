@@ -16,15 +16,15 @@ class AppointmentType extends HiveObject {
   @HiveField(3)
   late int defaultDuration;
 
-  @HiveField(4) // New field
-  late String target; // "male", "female", or "all"
+  @HiveField(4)
+  late String target;
 
   AppointmentType({
     required this.id,
     required this.name,
     required this.defaultPrice,
     required this.defaultDuration,
-    this.target = 'all', // Required
+    required this.target,
   });
 
   static Future<int> getNextId() async {
