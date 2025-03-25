@@ -38,19 +38,19 @@ class EditClientPageState extends State<EditClientPage> {
     if (widget.client == null) {
       int newId = await Client.getNextId();
       final newClient = Client(
-        firstName: _firstNameController.text,
-        lastName: _lastNameController.text,
-        phoneNumber: _phoneController.text,
-        address: _addressController.text,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
         gender: _selectedGender,
       )..id = newId;
       widget.box.put(newId, newClient);
     } else {
       widget.client!
-        ..firstName = _firstNameController.text
-        ..lastName = _lastNameController.text
-        ..phoneNumber = _phoneController.text
-        ..address = _addressController.text
+        ..firstName = _firstNameController.text.trim()
+        ..lastName = _lastNameController.text.trim()
+        ..phoneNumber = _phoneController.text.trim()
+        ..address = _addressController.text.trim()
         ..gender = _selectedGender;
       widget.client!.save();
     }
@@ -100,27 +100,44 @@ class EditClientPageState extends State<EditClientPage> {
 
   Column clientForm() {
     return Column(
+      spacing: 20,
       children: [
-        TextFormField(
+        TextField(
           controller: _firstNameController,
-          decoration: const InputDecoration(labelText: "First Name"),
-          validator: (value) => value!.isEmpty ? "Required" : null,
+          decoration: InputDecoration(
+            labelText: "First Name",
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
         ),
-        TextFormField(
+        TextField(
           controller: _lastNameController,
-          decoration: const InputDecoration(labelText: "Last Name"),
-          validator: (value) => value!.isEmpty ? "Required" : null,
+          decoration: InputDecoration(
+            labelText: "Last Name",
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
         ),
-        TextFormField(
+        TextField(
           controller: _phoneController,
           keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(labelText: "Phone Number"),
-          validator: (value) => value!.isEmpty ? "Required" : null,
+          decoration: InputDecoration(
+            labelText: "Phone Number",
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
         ),
-        TextFormField(
+        TextField(
           controller: _addressController,
-          decoration: const InputDecoration(labelText: "Address"),
-          validator: (value) => value!.isEmpty ? "Required" : null,
+          decoration: InputDecoration(
+            labelText: "Address",
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
         ),
       ],
     );

@@ -26,7 +26,7 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
   void initState() {
     super.initState();
     if (widget.appointmentType != null) {
-      _nameController.text = widget.appointmentType!.name;
+      _nameController.text = widget.appointmentType!.name.trim();
       _priceController.text = widget.appointmentType!.defaultPrice.toString();
       _durationController.text =
           widget.appointmentType!.defaultDuration.toString();
@@ -84,60 +84,38 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 20,
           children: [
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
+              decoration: InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+              ),
             ),
             TextField(
               controller: _priceController,
-              decoration: const InputDecoration(labelText: 'Default Price'),
+              decoration: InputDecoration(
+                labelText: 'Default Price',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+              ),
               keyboardType: TextInputType.number,
             ),
             TextField(
               controller: _durationController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Default Duration (mins)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 20),
-            const Text("Target"),
-            const SizedBox(height: 10),
-            Center(
-              child: ToggleButtons(
-                isSelected: [
-                  _selectedTarget == "male",
-                  _selectedTarget == "female",
-                  _selectedTarget == "all",
-                ],
-                onPressed: (index) {
-                  setState(() {
-                    _selectedTarget = ["male", "female", "all"][index];
-                  });
-                },
-                borderRadius: BorderRadius.circular(10.0),
-                constraints: BoxConstraints(
-                  minWidth: (MediaQuery.of(context).size.width - 64) / 3,
-                  minHeight: 50,
-                ),
-                children: const [
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text("Male"),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text("Female"),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text("All"),
-                  ),
-                ],
-              ),
-            ),
+            targetSelection(context),
           ],
         ),
       ),
@@ -163,6 +141,49 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Column targetSelection(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        const Text("Target"),
+        const SizedBox(height: 10),
+        Center(
+          child: ToggleButtons(
+            isSelected: [
+              _selectedTarget == "male",
+              _selectedTarget == "female",
+              _selectedTarget == "all",
+            ],
+            onPressed: (index) {
+              setState(() {
+                _selectedTarget = ["male", "female", "all"][index];
+              });
+            },
+            borderRadius: BorderRadius.circular(10.0),
+            constraints: BoxConstraints(
+              minWidth: (MediaQuery.of(context).size.width - 64) / 3,
+              minHeight: 50,
+            ),
+            children: const [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Text("Male"),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Text("Female"),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Text("All"),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
