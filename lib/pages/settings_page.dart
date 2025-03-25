@@ -1,10 +1,17 @@
-import 'package:barbero/pages/data/appointment_types_page.dart';
+import 'package:barbero/pages/appointment_types_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:barbero/theme/theme_provider.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
+
+  void showAppointmentTypesPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AppointmentTypesPage()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,12 +30,7 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             title: const Text("Manage Appointment Types"),
             trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AppointmentTypesPage()),
-              );
-            },
+            onTap: () => showAppointmentTypesPage(context),
           ),
         ],
       ),

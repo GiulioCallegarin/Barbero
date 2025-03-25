@@ -1,8 +1,9 @@
 import 'package:barbero/models/appointment.dart';
 import 'package:barbero/models/client.dart';
+import 'package:barbero/widgets/appointments/appointments_recap.dart';
+import 'package:barbero/widgets/clients/client_stats.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:intl/intl.dart';
 
 class ClientHistoryPage extends StatefulWidget {
   const ClientHistoryPage({super.key, required this.client});
@@ -29,25 +30,25 @@ class ClientHistoryPageState extends State<ClientHistoryPage> {
         appointmentsBox.values
             .where((appointment) => appointment.clientId == widget.client.key)
             .toList();
-    _sortAppointments();
-    _calculateStats();
+    sortAppointments();
+    generateStats();
   }
 
-  void _sortAppointments() {
+  void sortAppointments() {
     appointments.sort(
       (a, b) =>
           isDescending ? b.date.compareTo(a.date) : a.date.compareTo(b.date),
     );
   }
 
-  void _toggleSortOrder() {
+  void toggleSortOrder() {
     setState(() {
       isDescending = !isDescending;
-      _sortAppointments();
+      sortAppointments();
     });
   }
 
-  void _calculateStats() {
+  void generateStats() {
     totalAppointments = appointments.length;
     if (totalAppointments > 0) {
       totalMoneySpent = appointments.fold(0, (sum, item) => sum + item.price);
@@ -71,140 +72,19 @@ class ClientHistoryPageState extends State<ClientHistoryPage> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Client Statistics",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildStatTile(
-                              "Total Appointments",
-                              "$totalAppointments",
-                            ),
-                            _buildStatTile(
-                              "Avg. Spent",
-                              "€${avgMoneySpent.toStringAsFixed(2)}",
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildStatTile(
-                              "Total Spent",
-                              "€${totalMoneySpent.toStringAsFixed(2)}",
-                            ),
-                            _buildStatTile(
-                              "Avg. Days Between",
-                              "${avgTimeBetweenAppointments.toStringAsFixed(1)} days",
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          ClientStats(
+            totalAppointments: totalAppointments,
+            totalMoneySpent: totalMoneySpent,
+            avgMoneySpent: avgMoneySpent,
+            avgTimeBetweenAppointments: avgTimeBetweenAppointments,
           ),
-          if (appointments.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8.0,
-                vertical: 4.0,
-              ),
-              child: ElevatedButton(
-                onPressed: _toggleSortOrder,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isDescending ? Icons.arrow_downward : Icons.arrow_upward,
-                    ),
-                    const SizedBox(width: 4),
-                    const Text("Sort by Date"),
-                  ],
-                ),
-              ),
-            ),
-          Expanded(
-            child:
-                appointments.isEmpty
-                    ? Center(
-                      child: Text(
-                        "No appointments yet.",
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    )
-                    : ListView.builder(
-                      itemCount: appointments.length,
-                      itemBuilder: (context, index) {
-                        final appointment = appointments.elementAt(index);
-                        return Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ListTile(
-                            title: Text(
-                              DateFormat(
-                                'hh:mm - dd/MM/yyyy',
-                              ).format(appointment.date),
-                            ),
-                            subtitle: Text(
-                              "Type: ${appointment.appointmentType}",
-                            ),
-                            trailing: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text("€${appointment.price}"),
-                                Text("${appointment.duration} mins"),
-                              ],
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            tileColor: Theme.of(context).colorScheme.secondary,
-                          ),
-                        );
-                      },
-                    ),
+          AppointmentsRecap(
+            appointments: appointments,
+            toggleSortOrder: toggleSortOrder,
+            isDescending: isDescending,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatTile(String title, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 16, color: Colors.blueGrey),
-        ),
-      ],
     );
   }
 }

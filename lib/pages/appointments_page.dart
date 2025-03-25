@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:barbero/models/appointment.dart';
-import 'package:barbero/widgets/appointment_dialog.dart';
+import 'package:barbero/widgets/appointments/appointment_dialog.dart';
 
 class AppointmentsPage extends StatefulWidget {
   const AppointmentsPage({super.key});
 
   @override
-  _AppointmentsPageState createState() => _AppointmentsPageState();
+  AppointmentsPageState createState() => AppointmentsPageState();
 }
 
-class _AppointmentsPageState extends State<AppointmentsPage> {
+class AppointmentsPageState extends State<AppointmentsPage> {
   late Box<Appointment> appointmentBox;
   late Box<Client> clientBox;
   DateTime _selectedDate = DateTime.now();

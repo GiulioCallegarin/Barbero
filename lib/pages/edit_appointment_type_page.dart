@@ -13,11 +13,10 @@ class EditAppointmentTypePage extends StatefulWidget {
   });
 
   @override
-  _EditAppointmentTypePageState createState() =>
-      _EditAppointmentTypePageState();
+  EditAppointmentTypePageState createState() => EditAppointmentTypePageState();
 }
 
-class _EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
+class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _durationController = TextEditingController();
@@ -66,7 +65,9 @@ class _EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
       widget.appointmentType!.target = _selectedTarget; // Update target
       widget.appointmentType!.save();
     }
+  }
 
+  void exit() {
     Navigator.pop(context);
   }
 
@@ -150,7 +151,10 @@ class _EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: saveAppointmentType,
+              onPressed: () {
+                saveAppointmentType();
+                exit();
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
               ),

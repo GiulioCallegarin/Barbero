@@ -1,5 +1,7 @@
 import 'package:barbero/pages/client_history_page.dart';
-import 'package:barbero/pages/editing/edit_client_page.dart';
+import 'package:barbero/pages/edit_client_page.dart';
+import 'package:barbero/widgets/clients/filtered_clients_list.dart';
+import 'package:barbero/widgets/delete_item_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:barbero/models/client.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -13,6 +15,7 @@ class ClientsPage extends StatefulWidget {
 
 class _ClientsPageState extends State<ClientsPage> {
   late Box<Client> clientBox;
+  final searchController = TextEditingController();
   String searchQuery = "";
 
   @override
@@ -21,7 +24,7 @@ class _ClientsPageState extends State<ClientsPage> {
     clientBox = Hive.box<Client>('clients');
   }
 
-  void _addOrEditClient([Client? client]) {
+  void showEditClientPage([Client? client]) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -30,32 +33,32 @@ class _ClientsPageState extends State<ClientsPage> {
     );
   }
 
-  void _deleteClient(int key) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("Delete Client"),
-            content: const Text("Are you sure you want to delete this client?"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
-              ),
-              TextButton(
-                onPressed: () {
-                  clientBox.delete(key);
-                  Navigator.pop(context);
-                  setState(() {}); // Refresh UI after deleting
-                },
-                child: Text(
-                  "Delete",
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-            ],
-          ),
+  void deleteClient(int key) {
+    deleteItemDialog(
+      context,
+      "Delete Client",
+      "Are you sure you want to delete this client?",
+      () {
+        clientBox.delete(key);
+        setState(() {});
+      },
     );
+  }
+
+  void showClientHistory(Client client) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ClientHistoryPage(client: client),
+      ),
+    );
+  }
+
+  void clearFilter() {
+    setState(() {
+      searchQuery = "";
+      searchController.clear();
+    });
   }
 
   @override
@@ -70,11 +73,19 @@ class _ClientsPageState extends State<ClientsPage> {
               decoration: InputDecoration(
                 hintText: "Search clients...",
                 prefixIcon: const Icon(Icons.search),
+                suffixIcon:
+                    searchQuery.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: clearFilter,
+                        )
+                        : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10.0),
                 ),
                 filled: true,
               ),
+              controller: searchController,
               onChanged: (value) {
                 setState(() {
                   searchQuery = value.toLowerCase();
@@ -84,80 +95,16 @@ class _ClientsPageState extends State<ClientsPage> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addOrEditClient(),
-        child: const Icon(Icons.add),
+      body: FilteredClientsList(
+        clientBox: clientBox,
+        searchQuery: searchQuery,
+        showEditClientPage: showEditClientPage,
+        deleteClient: deleteClient,
+        showClientHistory: showClientHistory,
       ),
-      body: ValueListenableBuilder(
-        valueListenable: clientBox.listenable(),
-        builder: (context, Box<Client> box, _) {
-          if (box.isEmpty) {
-            return const Center(child: Text("No Clients"));
-          }
-
-          final filteredClients =
-              box.values.where((client) {
-                final name =
-                    "${client.firstName} ${client.lastName}".toLowerCase();
-                return name.contains(searchQuery);
-              }).toList();
-
-          if (filteredClients.isEmpty) {
-            return const Center(child: Text("No matching clients"));
-          }
-
-          return ListView.builder(
-            itemCount: filteredClients.length,
-            itemBuilder: (context, index) {
-              final client = filteredClients[index];
-              final clientKey = box.keyAt(index);
-
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ListTile(
-                  title: Text("${client.firstName} ${client.lastName}"),
-                  subtitle: Text("${client.address}\n${client.phoneNumber}"),
-                  leading: Icon(
-                    client.gender == 'male'
-                        ? Icons.man_outlined
-                        : Icons.woman_outlined,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  tileColor: Theme.of(context).colorScheme.secondary,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.edit,
-                          color: Theme.of(context).colorScheme.inversePrimary,
-                        ),
-                        onPressed: () => _addOrEditClient(client),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.delete,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        onPressed: () => _deleteClient(clientKey),
-                      ),
-                    ],
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ClientHistoryPage(client: client),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          );
-        },
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => showEditClientPage(),
+        child: const Icon(Icons.add),
       ),
     );
   }
