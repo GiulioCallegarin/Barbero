@@ -4,7 +4,6 @@ import 'package:hive_ce_flutter/adapters.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:barbero/models/appointment.dart' as barbero;
-import 'package:barbero/widgets/appointments/appointment_dialog.dart';
 
 class AppointmentsPage extends StatefulWidget {
   const AppointmentsPage({super.key});
@@ -26,7 +25,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
     clientBox = Hive.box<Client>('clients');
   }
 
-  List<barbero.Appointment> _getAppointmentsForDay(DateTime day) {
+  List<barbero.Appointment> getAppointmentsForDay(DateTime day) {
     return appointmentBox.values.where((appt) {
       return appt.date.year == day.year &&
           appt.date.month == day.month &&
@@ -34,11 +33,12 @@ class AppointmentsPageState extends State<AppointmentsPage> {
     }).toList();
   }
 
-  void _addAppointment({DateTime? timeSlot}) {
-    showDialog(context: context, builder: (context) => AppointmentDialog());
-  }
+  void showEditAppointmentPage({
+    DateTime? timeSlot,
+    barbero.Appointment? appointment,
+  }) {}
 
-  Color _getStatusColor(barbero.AppointmentStatus status) {
+  Color getStatusColor(barbero.AppointmentStatus status) {
     switch (status) {
       case barbero.AppointmentStatus.done:
         return Colors.green;
@@ -53,17 +53,18 @@ class AppointmentsPageState extends State<AppointmentsPage> {
     }
   }
 
-  List<Appointment> _generateCalendarAppointments() {
-    final appointments = _getAppointmentsForDay(_selectedDate);
+  List<Appointment> generateCalendarAppointments() {
+    final appointments = getAppointmentsForDay(_selectedDate);
     final calendarStateAppointments =
         appointments.map((appt) {
           final client = clientBox.get(appt.clientId);
           return Appointment(
+            id: appt.id,
             startTime: appt.date,
             endTime: appt.date.add(Duration(minutes: appt.duration)),
             subject:
                 "${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - ${appt.appointmentType}",
-            color: _getStatusColor(appt.status),
+            color: getStatusColor(appt.status),
           );
         }).toList();
     return calendarStateAppointments;
@@ -81,7 +82,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
             focusedDay: _selectedDate,
             firstDay: DateTime(2000),
             lastDay: DateTime(2100),
-            eventLoader: (day) => _getAppointmentsForDay(day),
+            eventLoader: (day) => getAppointmentsForDay(day),
             calendarStyle: CalendarStyle(
               markerDecoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.inversePrimary,
@@ -118,7 +119,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                 headerHeight: 0,
                 view: CalendarView.day,
                 dataSource: AppointmentDataSource(
-                  _generateCalendarAppointments(),
+                  generateCalendarAppointments(),
                 ),
                 timeSlotViewSettings: TimeSlotViewSettings(
                   timeIntervalHeight: 50,
@@ -128,14 +129,15 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                 ),
                 onLongPress: (CalendarLongPressDetails details) {
                   if (details.targetElement == CalendarElement.appointment) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AppointmentDialog(),
+                    barbero.Appointment? appointment = appointmentBox.get(
+                      details.appointments![0].id,
                     );
+
+                    showEditAppointmentPage(appointment: appointment);
                   } else {
                     final DateTime? selectedTime = details.date;
                     if (selectedTime != null) {
-                      _addAppointment(timeSlot: selectedTime);
+                      showEditAppointmentPage(timeSlot: selectedTime);
                     }
                   }
                 },
@@ -144,10 +146,6 @@ class AppointmentsPageState extends State<AppointmentsPage> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addAppointment,
-        child: const Icon(Icons.add),
       ),
     );
   }

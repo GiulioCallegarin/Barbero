@@ -40,7 +40,6 @@ dependencies:
   table_calendar: ^3.2.0
   syncfusion_flutter_calendar: ^29.1.33
   intl: ^0.20.2
-  flutter_typeahead: ^5.2.0
 
 dev_dependencies:
   flutter_test:
