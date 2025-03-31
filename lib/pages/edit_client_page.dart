@@ -1,3 +1,4 @@
+import 'package:barbero/widgets/styled_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:barbero/models/client.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -18,7 +19,7 @@ class EditClientPageState extends State<EditClientPage> {
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
-  String _selectedGender = "male";
+  String _selectedGender = 'male';
 
   @override
   void initState() {
@@ -64,7 +65,7 @@ class EditClientPageState extends State<EditClientPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.client == null ? "Add Client" : "Edit Client"),
+        title: Text(widget.client == null ? 'Add Client' : 'Edit Client'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -80,7 +81,7 @@ class EditClientPageState extends State<EditClientPage> {
           children: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -90,7 +91,7 @@ class EditClientPageState extends State<EditClientPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
               ),
-              child: const Text("Save"),
+              child: const Text('Save'),
             ),
           ],
         ),
@@ -102,43 +103,14 @@ class EditClientPageState extends State<EditClientPage> {
     return Column(
       spacing: 20,
       children: [
-        TextField(
-          controller: _firstNameController,
-          decoration: InputDecoration(
-            labelText: "First Name",
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-          ),
-        ),
-        TextField(
-          controller: _lastNameController,
-          decoration: InputDecoration(
-            labelText: "Last Name",
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-          ),
-        ),
-        TextField(
+        StyledTextField(label: 'First Name', controller: _firstNameController),
+        StyledTextField(label: 'Last Name', controller: _lastNameController),
+        StyledTextField(
+          label: 'Phone Number',
           controller: _phoneController,
           keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: "Phone Number",
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-          ),
         ),
-        TextField(
-          controller: _addressController,
-          decoration: InputDecoration(
-            labelText: "Address",
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-          ),
-        ),
+        StyledTextField(label: 'Address', controller: _addressController),
       ],
     );
   }
@@ -147,18 +119,18 @@ class EditClientPageState extends State<EditClientPage> {
     return Column(
       children: [
         const SizedBox(height: 20),
-        const Text("Gender"),
+        const Text('Gender'),
         const SizedBox(height: 10),
         Center(
           // Centering the ToggleButtons horizontally
           child: ToggleButtons(
             isSelected: [
-              _selectedGender == "male",
-              _selectedGender == "female",
+              _selectedGender == 'male',
+              _selectedGender == 'female',
             ],
             onPressed: (index) {
               setState(() {
-                _selectedGender = ["male", "female"][index];
+                _selectedGender = ['male', 'female'][index];
               });
             },
             borderRadius: BorderRadius.circular(10.0),
@@ -172,7 +144,7 @@ class EditClientPageState extends State<EditClientPage> {
                 children: [
                   const Icon(Icons.man_outlined),
                   const SizedBox(width: 8.0),
-                  const Text("Male"),
+                  const Text('Male'),
                 ],
               ),
               Row(
@@ -180,7 +152,7 @@ class EditClientPageState extends State<EditClientPage> {
                 children: [
                   const Icon(Icons.woman_outlined),
                   const SizedBox(width: 8.0),
-                  const Text("Female"),
+                  const Text('Female'),
                 ],
               ),
             ],

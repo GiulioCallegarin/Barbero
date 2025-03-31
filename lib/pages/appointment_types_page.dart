@@ -39,8 +39,8 @@ class _AppointmentTypesPageState extends State<AppointmentTypesPage> {
   void deleteAppointmentType(BuildContext context, int id) {
     deleteItemDialog(
       context,
-      "Delete appointment type",
-      "Are you sure you want to delete this appointment type?",
+      'Delete appointment type',
+      'Are you sure you want to delete this appointment type?',
       () {
         appointmentTypeBox.delete(id);
       },

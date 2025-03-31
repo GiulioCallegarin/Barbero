@@ -1,4 +1,5 @@
 import 'package:barbero/models/client.dart';
+import 'package:barbero/pages/edit_appointment_page.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/adapters.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -36,7 +37,18 @@ class AppointmentsPageState extends State<AppointmentsPage> {
   void showEditAppointmentPage({
     DateTime? timeSlot,
     barbero.Appointment? appointment,
-  }) {}
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => EditAppointmentPage(
+              timeSlot: timeSlot,
+              appointment: appointment,
+            ),
+      ),
+    );
+  }
 
   Color getStatusColor(barbero.AppointmentStatus status) {
     switch (status) {

@@ -24,24 +24,24 @@ class FilteredClientsList extends StatelessWidget {
       valueListenable: clientBox.listenable(),
       builder: (context, Box<Client> box, _) {
         if (box.isEmpty) {
-          return const Center(child: Text("No Clients"));
+          return const Center(child: Text('No Clients'));
         }
 
         final filteredClients =
             box.values.where((client) {
               final name =
-                  "${client.firstName} ${client.lastName}".toLowerCase();
+                  '${client.firstName} ${client.lastName}'.toLowerCase();
               return name.contains(searchQuery);
             }).toList();
 
         filteredClients.sort((a, b) {
-          final aName = "${a.firstName} ${a.lastName}".toLowerCase();
-          final bName = "${b.firstName} ${b.lastName}".toLowerCase();
+          final aName = '${a.firstName} ${a.lastName}'.toLowerCase();
+          final bName = '${b.firstName} ${b.lastName}'.toLowerCase();
           return aName.compareTo(bName);
         });
 
         if (filteredClients.isEmpty) {
-          return const Center(child: Text("No matching clients"));
+          return const Center(child: Text('No matching clients'));
         }
 
         return ListView.builder(
@@ -53,8 +53,8 @@ class FilteredClientsList extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.all(8.0),
               child: ListTile(
-                title: Text("${client.firstName} ${client.lastName}"),
-                subtitle: Text("${client.address}\n${client.phoneNumber}"),
+                title: Text('${client.firstName} ${client.lastName}'),
+                subtitle: Text('${client.address}\n${client.phoneNumber}'),
                 leading: Icon(
                   client.gender == 'male'
                       ? Icons.man_outlined

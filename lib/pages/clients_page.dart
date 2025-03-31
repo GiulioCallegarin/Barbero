@@ -16,7 +16,7 @@ class ClientsPage extends StatefulWidget {
 class _ClientsPageState extends State<ClientsPage> {
   late Box<Client> clientBox;
   final searchController = TextEditingController();
-  String searchQuery = "";
+  String searchQuery = '';
 
   @override
   void initState() {
@@ -36,8 +36,8 @@ class _ClientsPageState extends State<ClientsPage> {
   void deleteClient(int key) {
     deleteItemDialog(
       context,
-      "Delete Client",
-      "Are you sure you want to delete this client?",
+      'Delete Client',
+      'Are you sure you want to delete this client?',
       () {
         clientBox.delete(key);
         setState(() {});
@@ -56,7 +56,7 @@ class _ClientsPageState extends State<ClientsPage> {
 
   void clearFilter() {
     setState(() {
-      searchQuery = "";
+      searchQuery = '';
       searchController.clear();
     });
   }
@@ -71,7 +71,7 @@ class _ClientsPageState extends State<ClientsPage> {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               decoration: InputDecoration(
-                hintText: "Search clients...",
+                hintText: 'Search clients...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon:
                     searchQuery.isNotEmpty

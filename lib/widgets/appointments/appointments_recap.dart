@@ -31,7 +31,7 @@ class AppointmentsRecap extends StatelessWidget {
                     isDescending ? Icons.arrow_downward : Icons.arrow_upward,
                   ),
                   const SizedBox(width: 4),
-                  const Text("Sort by Date"),
+                  const Text('Sort by Date'),
                 ],
               ),
             ),
@@ -46,12 +46,12 @@ class AppointmentsRecap extends StatelessWidget {
                   title: Text(
                     DateFormat('hh:mm - dd/MM/yyyy').format(appointment.date),
                   ),
-                  subtitle: Text("Type: ${appointment.appointmentType}"),
+                  subtitle: Text('Type: ${appointment.appointmentType}'),
                   trailing: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("€${appointment.price}"),
-                      Text("${appointment.duration} mins"),
+                      Text('€${appointment.price}'),
+                      Text('${appointment.duration} mins'),
                     ],
                   ),
                   shape: RoundedRectangleBorder(
@@ -70,7 +70,7 @@ class AppointmentsRecap extends StatelessWidget {
         SizedBox(height: 200),
         Center(
           child: Text(
-            "No appointments yet.",
+            'No appointments yet.',
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ),

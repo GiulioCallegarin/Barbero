@@ -20,7 +20,7 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         children: [
           SwitchListTile(
-            title: const Text("Dark Mode"),
+            title: const Text('Dark Mode'),
             value: Provider.of<ThemeProvider>(context).isDarkMode,
             onChanged: (value) {
               Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
@@ -28,7 +28,7 @@ class SettingsPage extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
-            title: const Text("Manage Appointment Types"),
+            title: const Text('Manage Appointment Types'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () => showAppointmentTypesPage(context),
           ),

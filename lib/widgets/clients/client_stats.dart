@@ -27,7 +27,7 @@ class ClientStats extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Client Statistics",
+                'Client Statistics',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -40,10 +40,10 @@ class ClientStats extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      statTile("Total Appointments", "$totalAppointments"),
+                      statTile('Total Appointments', '$totalAppointments'),
                       statTile(
-                        "Avg. Spent",
-                        "€${avgMoneySpent.toStringAsFixed(2)}",
+                        'Avg. Spent',
+                        '€${avgMoneySpent.toStringAsFixed(2)}',
                       ),
                     ],
                   ),
@@ -51,12 +51,12 @@ class ClientStats extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       statTile(
-                        "Total Spent",
-                        "€${totalMoneySpent.toStringAsFixed(2)}",
+                        'Total Spent',
+                        '€${totalMoneySpent.toStringAsFixed(2)}',
                       ),
                       statTile(
-                        "Avg. Days Between",
-                        "${avgTimeBetweenAppointments.toStringAsFixed(1)} days",
+                        'Avg. Days Between',
+                        '${avgTimeBetweenAppointments.toStringAsFixed(1)} days',
                       ),
                     ],
                   ),

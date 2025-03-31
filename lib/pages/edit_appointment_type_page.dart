@@ -1,3 +1,4 @@
+import 'package:barbero/widgets/styled_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:barbero/models/appointment_type.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -20,7 +21,7 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _durationController = TextEditingController();
-  String _selectedTarget = "all"; // Default value
+  String _selectedTarget = 'all'; // Default value
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
         _durationController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("All fields are required!")));
+      ).showSnackBar(const SnackBar(content: Text('All fields are required!')));
       return;
     }
 
@@ -86,33 +87,15 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
         child: Column(
           spacing: 20,
           children: [
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-              ),
-            ),
-            TextField(
+            StyledTextField(label: 'Name', controller: _nameController),
+            StyledTextField(
+              label: 'Default Price',
               controller: _priceController,
-              decoration: InputDecoration(
-                labelText: 'Default Price',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-              ),
               keyboardType: TextInputType.number,
             ),
-            TextField(
+            StyledTextField(
+              label: 'Default Duration (minutes)',
               controller: _durationController,
-              decoration: InputDecoration(
-                labelText: 'Default Duration (mins)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-              ),
               keyboardType: TextInputType.number,
             ),
             targetSelection(context),
@@ -148,18 +131,18 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
     return Column(
       children: [
         const SizedBox(height: 20),
-        const Text("Target"),
+        const Text('Target'),
         const SizedBox(height: 10),
         Center(
           child: ToggleButtons(
             isSelected: [
-              _selectedTarget == "male",
-              _selectedTarget == "female",
-              _selectedTarget == "all",
+              _selectedTarget == 'male',
+              _selectedTarget == 'female',
+              _selectedTarget == 'all',
             ],
             onPressed: (index) {
               setState(() {
-                _selectedTarget = ["male", "female", "all"][index];
+                _selectedTarget = ['male', 'female', 'all'][index];
               });
             },
             borderRadius: BorderRadius.circular(10.0),
@@ -170,15 +153,15 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
             children: const [
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text("Male"),
+                child: Text('Male'),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text("Female"),
+                child: Text('Female'),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text("All"),
+                child: Text('All'),
               ),
             ],
           ),
