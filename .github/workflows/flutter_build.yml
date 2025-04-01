@@ -34,7 +34,7 @@ jobs:
         run: flutter build apk
         
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
@@ -68,7 +68,7 @@ jobs:
         run: flutter build ios --release --no-codesign
         
       - name: Upload iOS build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: ios-build
           path: build/ios/iphoneos
