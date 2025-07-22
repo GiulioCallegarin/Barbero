@@ -9,6 +9,7 @@ class ThemeProvider extends ChangeNotifier {
       Hive.box('settings').get('darkMode', defaultValue: false)
           ? darkMode
           : lightMode;
+
   ThemeData get themeData => _themeData;
   bool get isDarkMode => _themeData == darkMode;
 
