@@ -5,6 +5,7 @@ import 'package:hive_ce_flutter/adapters.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:barbero/models/appointment.dart' as barbero;
+import 'package:timezone/timezone.dart' as tz;
 
 class AppointmentsPage extends StatefulWidget {
   const AppointmentsPage({super.key});
@@ -37,8 +38,8 @@ class AppointmentsPageState extends State<AppointmentsPage> {
   void showEditAppointmentPage({
     DateTime? timeSlot,
     barbero.Appointment? appointment,
-  }) {
-    Navigator.push(
+  }) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder:
@@ -48,6 +49,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
             ),
       ),
     );
+    setState(() {});
   }
 
   Color getStatusColor(barbero.AppointmentStatus status) {
@@ -67,13 +69,16 @@ class AppointmentsPageState extends State<AppointmentsPage> {
 
   List<Appointment> generateCalendarAppointments() {
     final appointments = getAppointmentsForDay(_selectedDate);
+    final rome = tz.getLocation('Europe/Rome');
     final calendarStateAppointments =
         appointments.map((appt) {
           final client = clientBox.get(appt.clientId);
+          final startTime = tz.TZDateTime.from(appt.date, rome);
+          final endTime = startTime.add(Duration(minutes: appt.duration));
           return Appointment(
             id: appt.id,
-            startTime: appt.date,
-            endTime: appt.date.add(Duration(minutes: appt.duration)),
+            startTime: startTime,
+            endTime: endTime,
             subject:
                 "${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - ${appt.appointmentType}",
             color: getStatusColor(appt.status),
@@ -84,6 +89,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final rome = tz.getLocation('Europe/Rome');
     return Scaffold(
       appBar: AppBar(title: const Text('Appointments')),
       body: Column(
@@ -114,47 +120,73 @@ class AppointmentsPageState extends State<AppointmentsPage> {
           ),
           const SizedBox(height: 10),
           Expanded(
-            child: KeyedSubtree(
-              key: ValueKey(
-                _selectedDate,
-              ), // Forces rebuild when the date changes
-              child: SfCalendar(
-                initialDisplayDate: _selectedDate,
-                onViewChanged: (viewChangedDetails) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    setState(() {
-                      _selectedDate = viewChangedDetails.visibleDates[0];
-                    });
-                  });
-                },
-                viewHeaderHeight: 0,
-                headerHeight: 0,
-                view: CalendarView.day,
-                dataSource: AppointmentDataSource(
-                  generateCalendarAppointments(),
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    children:
+                        getAppointmentsForDay(_selectedDate).map((appt) {
+                          final client = clientBox.get(appt.clientId);
+                          final romeDate = tz.TZDateTime.from(appt.date, rome);
+                          final time =
+                              "${romeDate.hour.toString().padLeft(2, '0')}:${romeDate.minute.toString().padLeft(2, '0')}";
+                          return ListTile(
+                            title: Text(
+                              "${client?.firstName ?? ''} ${client?.lastName ?? ''}",
+                            ),
+                            subtitle: Text('Time: $time'),
+                            trailing: Text(appt.appointmentType),
+                            onTap:
+                                () =>
+                                    showEditAppointmentPage(appointment: appt),
+                          );
+                        }).toList(),
+                  ),
                 ),
-                timeSlotViewSettings: TimeSlotViewSettings(
-                  timeIntervalHeight: 50,
-                  startHour: 8,
-                  endHour: 20,
-                  timeInterval: Duration(minutes: 30),
+                SizedBox(
+                  height: 300,
+                  child: KeyedSubtree(
+                    key: ValueKey(_selectedDate),
+                    child: SfCalendar(
+                      initialDisplayDate: _selectedDate,
+                      onViewChanged: (viewChangedDetails) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          setState(() {
+                            _selectedDate = viewChangedDetails.visibleDates[0];
+                          });
+                        });
+                      },
+                      viewHeaderHeight: 0,
+                      headerHeight: 0,
+                      view: CalendarView.day,
+                      dataSource: AppointmentDataSource(
+                        generateCalendarAppointments(),
+                      ),
+                      timeSlotViewSettings: TimeSlotViewSettings(
+                        timeIntervalHeight: 50,
+                        startHour: 8,
+                        endHour: 20,
+                        timeInterval: Duration(minutes: 30),
+                      ),
+                      onLongPress: (CalendarLongPressDetails details) {
+                        if (details.targetElement ==
+                            CalendarElement.appointment) {
+                          barbero.Appointment? appointment = appointmentBox.get(
+                            details.appointments![0].id,
+                          );
+                          showEditAppointmentPage(appointment: appointment);
+                        } else {
+                          final DateTime? selectedTime = details.date;
+                          if (selectedTime != null) {
+                            showEditAppointmentPage(timeSlot: selectedTime);
+                          }
+                        }
+                      },
+                      allowDragAndDrop: false,
+                    ),
+                  ),
                 ),
-                onLongPress: (CalendarLongPressDetails details) {
-                  if (details.targetElement == CalendarElement.appointment) {
-                    barbero.Appointment? appointment = appointmentBox.get(
-                      details.appointments![0].id,
-                    );
-
-                    showEditAppointmentPage(appointment: appointment);
-                  } else {
-                    final DateTime? selectedTime = details.date;
-                    if (selectedTime != null) {
-                      showEditAppointmentPage(timeSlot: selectedTime);
-                    }
-                  }
-                },
-                allowDragAndDrop: false,
-              ),
+              ],
             ),
           ),
         ],

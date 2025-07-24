@@ -37,6 +37,20 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     clientBox = Hive.box<Client>('clients');
     appointmentTypeBox = Hive.box<AppointmentType>('appointmentTypes');
     selectedDate = widget.timeSlot ?? DateTime.now();
+
+    if (widget.appointment != null) {
+      selectedDate = widget.appointment!.date;
+      selectedClientId = widget.appointment!.clientId;
+      selectedTypeId =
+          appointmentTypeBox.values
+              .firstWhere(
+                (type) => type.name == widget.appointment!.appointmentType,
+                orElse: () => appointmentTypeBox.values.first,
+              )
+              .id;
+      priceController.text = widget.appointment!.price.toString();
+      durationController.text = widget.appointment!.duration.toString();
+    }
   }
 
   void saveAppointment() {
@@ -46,6 +60,41 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       );
       return;
     }
+
+    final price = double.tryParse(priceController.text) ?? 0.0;
+    final duration = int.tryParse(durationController.text) ?? 0;
+    final appointmentType = appointmentTypeBox.get(selectedTypeId);
+
+    if (widget.appointment != null) {
+      final appt = widget.appointment!;
+      appt.date = selectedDate;
+      appt.clientId = selectedClientId!;
+      appt.appointmentType = appointmentType?.name ?? '';
+      appt.appointmentTypeId = selectedTypeId!;
+      appt.price = price;
+      appt.duration = duration;
+      appointmentBox.put(appt.id, appt);
+    } else {
+      final newId =
+          appointmentBox.isEmpty
+              ? 1
+              : appointmentBox.values
+                      .map((a) => a.id)
+                      .reduce((a, b) => a > b ? a : b) +
+                  1;
+      final newAppointment = Appointment(
+        id: newId,
+        date: selectedDate,
+        clientId: selectedClientId!,
+        appointmentType: appointmentType?.name ?? '',
+        appointmentTypeId: selectedTypeId!,
+        price: price,
+        duration: duration,
+        status: AppointmentStatus.pending,
+      );
+      appointmentBox.put(newId, newAppointment);
+    }
+
     Navigator.pop(context);
   }
 
