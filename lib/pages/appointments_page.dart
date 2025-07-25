@@ -5,7 +5,6 @@ import 'package:hive_ce_flutter/adapters.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:barbero/models/appointment.dart' as barbero;
-import 'package:timezone/timezone.dart' as tz;
 
 class AppointmentsPage extends StatefulWidget {
   const AppointmentsPage({super.key});
@@ -69,11 +68,10 @@ class AppointmentsPageState extends State<AppointmentsPage> {
 
   List<Appointment> generateCalendarAppointments() {
     final appointments = getAppointmentsForDay(_selectedDate);
-    final rome = tz.getLocation('Europe/Rome');
     final calendarStateAppointments =
         appointments.map((appt) {
           final client = clientBox.get(appt.clientId);
-          final startTime = tz.TZDateTime.from(appt.date, rome);
+          final startTime = appt.date;
           final endTime = startTime.add(Duration(minutes: appt.duration));
           return Appointment(
             id: appt.id,
@@ -89,7 +87,6 @@ class AppointmentsPageState extends State<AppointmentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final rome = tz.getLocation('Europe/Rome');
     return Scaffold(
       appBar: AppBar(title: const Text('Appointments')),
       body: Column(
@@ -127,9 +124,8 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                     children:
                         getAppointmentsForDay(_selectedDate).map((appt) {
                           final client = clientBox.get(appt.clientId);
-                          final romeDate = tz.TZDateTime.from(appt.date, rome);
                           final time =
-                              "${romeDate.hour.toString().padLeft(2, '0')}:${romeDate.minute.toString().padLeft(2, '0')}";
+                              "${appt.date.hour.toString().padLeft(2, '0')}:${appt.date.minute.toString().padLeft(2, '0')}";
                           return ListTile(
                             title: Text(
                               "${client?.firstName ?? ''} ${client?.lastName ?? ''}",
@@ -165,8 +161,9 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                       timeSlotViewSettings: TimeSlotViewSettings(
                         timeIntervalHeight: 50,
                         startHour: 8,
-                        endHour: 20,
-                        timeInterval: Duration(minutes: 30),
+                        endHour: 22,
+                        timeInterval: Duration(minutes: 15),
+                        timeFormat: 'HH:mm',
                       ),
                       onLongPress: (CalendarLongPressDetails details) {
                         if (details.targetElement ==

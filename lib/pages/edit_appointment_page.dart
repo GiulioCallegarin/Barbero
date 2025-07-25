@@ -65,9 +65,11 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     final duration = int.tryParse(durationController.text) ?? 0;
     final appointmentType = appointmentTypeBox.get(selectedTypeId);
 
+    final localDate = selectedDate;
+
     if (widget.appointment != null) {
       final appt = widget.appointment!;
-      appt.date = selectedDate;
+      appt.date = localDate;
       appt.clientId = selectedClientId!;
       appt.appointmentType = appointmentType?.name ?? '';
       appt.appointmentTypeId = selectedTypeId!;
@@ -84,7 +86,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                   1;
       final newAppointment = Appointment(
         id: newId,
-        date: selectedDate,
+        date: localDate,
         clientId: selectedClientId!,
         appointmentType: appointmentType?.name ?? '',
         appointmentTypeId: selectedTypeId!,
@@ -135,6 +137,9 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 onChanged: (value) {
                   setState(() {
                     selectedClientId = value;
+                    selectedTypeId = null;
+                    priceController.clear();
+                    durationController.clear();
                   });
                 },
                 dropdownBuilder: (context, selectedItem) {
@@ -162,6 +167,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
               ),
               const SizedBox(height: 16),
               DropdownSearch<int>(
+                enabled: selectedClientId != null,
                 items: (filter, infiniteScrollProps) {
                   final selectedClient = clientBox.values.firstWhere(
                     (c) => c.id == selectedClientId,
@@ -228,7 +234,13 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                     selectedDate: selectedDate,
                     onDateChanged: (date) {
                       setState(() {
-                        selectedDate = date;
+                        selectedDate = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          selectedDate.hour,
+                          selectedDate.minute,
+                        );
                       });
                     },
                   ),
@@ -237,7 +249,13 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                     selectedDate: selectedDate,
                     onTimeChanged: (time) {
                       setState(() {
-                        selectedDate = time;
+                        selectedDate = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                          time.hour,
+                          time.minute,
+                        );
                       });
                     },
                   ),

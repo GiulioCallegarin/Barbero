@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class CustomTimePicker extends StatelessWidget {
   final DateTime? selectedDate;
   final Function(DateTime) onTimeChanged;
+
   const CustomTimePicker({
     super.key,
     required this.selectedDate,
@@ -13,7 +14,14 @@ class CustomTimePicker extends StatelessWidget {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(selectedDate!),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        );
+      },
     );
+
     if (pickedTime != null &&
         pickedTime != TimeOfDay.fromDateTime(selectedDate!)) {
       final DateTime newDateTime = DateTime(
@@ -31,7 +39,6 @@ class CustomTimePicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      spacing: 20,
       children: [
         OutlinedButton(
           onPressed: () => _selectTime(context),
