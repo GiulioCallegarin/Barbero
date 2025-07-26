@@ -100,6 +100,23 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     Navigator.pop(context);
   }
 
+  void markAsCompleted() {
+    if (widget.appointment != null) {
+      setState(() {
+        widget.appointment!.status = AppointmentStatus.done;
+        appointmentBox.put(widget.appointment!.id, widget.appointment!);
+      });
+      Navigator.pop(context);
+    }
+  }
+
+  void deleteAppointment() {
+    if (widget.appointment != null) {
+      appointmentBox.delete(widget.appointment!.id);
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,6 +127,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
           child: Column(
             children: [
               DropdownSearch<int>(
+                selectedItem: selectedClientId,
                 items:
                     (filter, infiniteScrollProps) =>
                         clientBox.values.map((client) => client.id).toList(),
@@ -168,6 +186,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
               const SizedBox(height: 16),
               DropdownSearch<int>(
                 enabled: selectedClientId != null,
+                selectedItem: selectedTypeId,
                 items: (filter, infiniteScrollProps) {
                   final selectedClient = clientBox.values.firstWhere(
                     (c) => c.id == selectedClientId,
@@ -274,6 +293,45 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 32),
+              if (widget.appointment != null)
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: markAsCompleted,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Mark as Completed',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: deleteAppointment,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Delete',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              if (widget.appointment != null) const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
