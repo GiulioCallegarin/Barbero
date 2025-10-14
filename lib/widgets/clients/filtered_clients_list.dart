@@ -24,7 +24,7 @@ class FilteredClientsList extends StatelessWidget {
       valueListenable: clientBox.listenable(),
       builder: (context, Box<Client> box, _) {
         if (box.isEmpty) {
-          return const Center(child: Text('No Clients'));
+          return const Center(child: Text('Nessun cliente'));
         }
 
         final filteredClients =
@@ -41,7 +41,7 @@ class FilteredClientsList extends StatelessWidget {
         });
 
         if (filteredClients.isEmpty) {
-          return const Center(child: Text('No matching clients'));
+          return const Center(child: Text('Nessun cliente corrispondente'));
         }
 
         return ListView.builder(

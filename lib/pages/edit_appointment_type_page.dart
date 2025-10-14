@@ -39,9 +39,9 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
     if (_nameController.text.isEmpty ||
         _priceController.text.isEmpty ||
         _durationController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('All fields are required!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tutti i campi sono obbligatori')),
+      );
       return;
     }
 
@@ -78,8 +78,8 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
       appBar: AppBar(
         title: Text(
           widget.appointmentType == null
-              ? 'Add Appointment Type'
-              : 'Edit Appointment Type',
+              ? 'Aggiungi tipo di servizio'
+              : 'Modifica tipo di servizio',
         ),
       ),
       body: Padding(
@@ -87,14 +87,14 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
         child: Column(
           spacing: 20,
           children: [
-            StyledTextField(label: 'Name', controller: _nameController),
+            StyledTextField(label: 'Nome', controller: _nameController),
             StyledTextField(
-              label: 'Default Price',
+              label: 'Prezzo predefinito',
               controller: _priceController,
               keyboardType: TextInputType.number,
             ),
             StyledTextField(
-              label: 'Default Duration (minutes)',
+              label: 'Durata predefinita (minuti)',
               controller: _durationController,
               keyboardType: TextInputType.number,
             ),
@@ -109,7 +109,7 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
           children: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Annulla'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -119,7 +119,7 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
               ),
-              child: const Text('Save'),
+              child: const Text('Salva'),
             ),
           ],
         ),
@@ -131,7 +131,7 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
     return Column(
       children: [
         const SizedBox(height: 20),
-        const Text('Target'),
+        const Text('Destinatari'),
         const SizedBox(height: 10),
         Center(
           child: ToggleButtons(
@@ -153,15 +153,15 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
             children: const [
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text('Male'),
+                child: Text('Uomo'),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text('Female'),
+                child: Text('Donna'),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text('All'),
+                child: Text('Tutti'),
               ),
             ],
           ),

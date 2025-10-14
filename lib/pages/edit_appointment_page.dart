@@ -29,6 +29,8 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
 
   final TextEditingController priceController = TextEditingController();
   final TextEditingController durationController = TextEditingController();
+  // pause duration in minutes (tempo di posa), between 0 and 180
+  int pauseDurationMinutes = 0;
 
   @override
   void initState() {
@@ -50,14 +52,15 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
               .id;
       priceController.text = widget.appointment!.price.toString();
       durationController.text = widget.appointment!.duration.toString();
+      pauseDurationMinutes = widget.appointment!.pauseDurationMinutes;
     }
   }
 
   void saveAppointment() {
     if (selectedClientId == null || selectedTypeId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select client and type')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Seleziona cliente e tipo')));
       return;
     }
 
@@ -75,6 +78,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       appt.appointmentTypeId = selectedTypeId!;
       appt.price = price;
       appt.duration = duration;
+      appt.pauseDurationMinutes = pauseDurationMinutes;
       appointmentBox.put(appt.id, appt);
     } else {
       final newId =
@@ -93,6 +97,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         price: price,
         duration: duration,
         status: AppointmentStatus.pending,
+        pauseDurationMinutes: pauseDurationMinutes,
       );
       appointmentBox.put(newId, newAppointment);
     }
@@ -120,7 +125,13 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Edit Appointment')),
+      appBar: AppBar(
+        title: Text(
+          widget.appointment == null
+              ? 'Nuovo appuntamento'
+              : 'Modifica appuntamento',
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
@@ -292,6 +303,76 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 controller: durationController,
                 keyboardType: TextInputType.number,
               ),
+              const SizedBox(height: 16),
+              // Pause duration (tempo di posa) sliders
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Pause Duration (Tempo di posa)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Hours: ${pauseDurationMinutes ~/ 60}'),
+                        Slider(
+                          value: (pauseDurationMinutes ~/ 60).toDouble(),
+                          min: 0,
+                          max: 3,
+                          divisions: 3,
+                          label: '${pauseDurationMinutes ~/ 60}h',
+                          onChanged: (v) {
+                            setState(() {
+                              final hours = v.toInt();
+                              final minutesPart = pauseDurationMinutes % 60;
+                              pauseDurationMinutes = hours * 60 + minutesPart;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Minutes: ${pauseDurationMinutes % 60}'),
+                        Slider(
+                          value: (pauseDurationMinutes % 60).toDouble(),
+                          min: 0,
+                          max: 55,
+                          divisions: 11, // 0..55 step 5
+                          label: '${pauseDurationMinutes % 60}m',
+                          onChanged: (v) {
+                            setState(() {
+                              // snap to nearest 5
+                              final snapped = (v / 5).round() * 5;
+                              final hours = pauseDurationMinutes ~/ 60;
+                              pauseDurationMinutes = hours * 60 + snapped;
+                              if (pauseDurationMinutes > 180) {
+                                pauseDurationMinutes = 180;
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Total pause: ${pauseDurationMinutes ~/ 60}h ${pauseDurationMinutes % 60}m',
+                ),
+              ),
+              const SizedBox(height: 32),
               const SizedBox(height: 32),
               if (widget.appointment != null)
                 Row(

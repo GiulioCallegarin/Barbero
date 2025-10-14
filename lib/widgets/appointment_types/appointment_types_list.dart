@@ -20,7 +20,7 @@ class AppointmentTypesList extends StatelessWidget {
       valueListenable: appointmentTypeBox.listenable(),
       builder: (context, Box<AppointmentType> box, _) {
         if (box.isEmpty) {
-          return const Center(child: Text('No appointment types added yet'));
+          return const Center(child: Text('Nessun tipo di servizio aggiunto'));
         }
         return ListView.builder(
           itemCount: box.length,
@@ -32,7 +32,7 @@ class AppointmentTypesList extends StatelessWidget {
               child: ListTile(
                 title: Text(appointmentType.name),
                 subtitle: Text(
-                  'Price: €${appointmentType.defaultPrice}\nDuration: ${appointmentType.defaultDuration} mins',
+                  'Prezzo: €${appointmentType.defaultPrice}\nDurata: ${appointmentType.defaultDuration} min',
                 ),
                 leading: Icon(
                   appointmentType.target == 'all'

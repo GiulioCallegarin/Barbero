@@ -68,27 +68,70 @@ class AppointmentsPageState extends State<AppointmentsPage> {
 
   List<Appointment> generateCalendarAppointments() {
     final appointments = getAppointmentsForDay(_selectedDate);
-    final calendarStateAppointments =
-        appointments.map((appt) {
-          final client = clientBox.get(appt.clientId);
-          final startTime = appt.date;
-          final endTime = startTime.add(Duration(minutes: appt.duration));
-          return Appointment(
+    final List<Appointment> calendarStateAppointments = [];
+
+    for (final appt in appointments) {
+      final client = clientBox.get(appt.clientId);
+      final startTime = appt.date;
+      final totalDuration = appt.duration;
+      final pause = appt.pauseDurationMinutes.clamp(0, 180);
+
+      // If no pause, add single appointment segment
+      if (pause <= 0) {
+        calendarStateAppointments.add(
+          Appointment(
             id: appt.id,
             startTime: startTime,
-            endTime: endTime,
+            endTime: startTime.add(Duration(minutes: totalDuration)),
             subject:
-                "${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - ${appt.appointmentType}",
+                '${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - ${appt.appointmentType}',
             color: getStatusColor(appt.status),
-          );
-        }).toList();
+          ),
+        );
+        continue;
+      }
+
+      // compute segments: service first, then pause appended after the service
+      final serviceDuration = totalDuration;
+      final serviceStart = startTime;
+      final serviceEnd = serviceStart.add(Duration(minutes: serviceDuration));
+
+      final pauseStart = serviceEnd;
+      final pauseEnd = pauseStart.add(Duration(minutes: pause));
+
+      // service segment (normal appointment color)
+      calendarStateAppointments.add(
+        Appointment(
+          id: appt.id,
+          startTime: serviceStart,
+          endTime: serviceEnd,
+          subject:
+              '${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - ${appt.appointmentType}',
+          color: getStatusColor(appt.status),
+        ),
+      );
+
+      // pause segment (gray, indicates unavailability after the service)
+      if (pause > 0) {
+        calendarStateAppointments.add(
+          Appointment(
+            id: appt.id,
+            startTime: pauseStart,
+            endTime: pauseEnd,
+            subject: 'Pausa',
+            color: Colors.grey.shade400,
+          ),
+        );
+      }
+    }
+
     return calendarStateAppointments;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Appointments')),
+      appBar: AppBar(title: const Text('Appuntamenti')),
       body: Column(
         children: [
           TableCalendar(
@@ -130,7 +173,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                             title: Text(
                               "${client?.firstName ?? ''} ${client?.lastName ?? ''}",
                             ),
-                            subtitle: Text('Time: $time'),
+                            subtitle: Text('Ora: $time'),
                             trailing: Text(appt.appointmentType),
                             onTap:
                                 () =>
@@ -168,6 +211,17 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                       onLongPress: (CalendarLongPressDetails details) {
                         if (details.targetElement ==
                             CalendarElement.appointment) {
+                          // If the tapped appointment is a Pause segment, open editor to create inside the pause
+                          final dynamic raw = details.appointments![0];
+                          final subject = raw.subject?.toString() ?? '';
+                          if (subject == 'Pausa') {
+                            final DateTime? selectedTime = details.date;
+                            if (selectedTime != null) {
+                              showEditAppointmentPage(timeSlot: selectedTime);
+                            }
+                            return;
+                          }
+
                           barbero.Appointment? appointment = appointmentBox.get(
                             details.appointments![0].id,
                           );

@@ -29,6 +29,12 @@ class AppointmentType extends HiveObject {
 
   static Future<int> getNextId() async {
     final box = Hive.box<AppointmentType>('appointmentTypes');
-    return (box.keys.isNotEmpty ? box.keys.last as int : 0) + 1;
+    if (box.isEmpty) return 1;
+    try {
+      final maxId = box.values.map((t) => t.id).reduce((a, b) => a > b ? a : b);
+      return maxId + 1;
+    } catch (_) {
+      return (box.keys.isNotEmpty ? box.keys.last as int : 0) + 1;
+    }
   }
 }

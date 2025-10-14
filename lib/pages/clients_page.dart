@@ -36,8 +36,8 @@ class _ClientsPageState extends State<ClientsPage> {
   void deleteClient(int key) {
     deleteItemDialog(
       context,
-      'Delete Client',
-      'Are you sure you want to delete this client?',
+      'Elimina cliente',
+      'Sei sicuro di voler eliminare questo cliente?',
       () {
         clientBox.delete(key);
         setState(() {});
@@ -70,8 +70,9 @@ class _ClientsPageState extends State<ClientsPage> {
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
+              controller: searchController,
               decoration: InputDecoration(
-                hintText: 'Search clients...',
+                hintText: 'Cerca clienti...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon:
                     searchQuery.isNotEmpty
@@ -85,7 +86,6 @@ class _ClientsPageState extends State<ClientsPage> {
                 ),
                 filled: true,
               ),
-              controller: searchController,
               onChanged: (value) {
                 setState(() {
                   searchQuery = value.toLowerCase();
@@ -104,6 +104,7 @@ class _ClientsPageState extends State<ClientsPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showEditClientPage(),
+        tooltip: 'Aggiungi cliente',
         child: const Icon(Icons.add),
       ),
     );

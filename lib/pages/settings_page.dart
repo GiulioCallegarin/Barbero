@@ -16,11 +16,11 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: const Text('Impostazioni')),
       body: ListView(
         children: [
           SwitchListTile(
-            title: const Text('Dark Mode'),
+            title: const Text('Tema scuro'),
             value: Provider.of<ThemeProvider>(context).isDarkMode,
             onChanged: (value) {
               Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
@@ -28,7 +28,7 @@ class SettingsPage extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
-            title: const Text('Manage Appointment Types'),
+            title: const Text('Gestisci tipi di servizio'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () => showAppointmentTypesPage(context),
           ),

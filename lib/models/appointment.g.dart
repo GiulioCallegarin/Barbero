@@ -29,13 +29,14 @@ class AppointmentAdapter extends TypeAdapter<Appointment> {
           fields[8] == null
               ? AppointmentStatus.pending
               : fields[8] as AppointmentStatus,
+      pauseDurationMinutes: (fields[9] as num?)?.toInt() ?? 0,
     );
   }
 
   @override
   void write(BinaryWriter writer, Appointment obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +54,9 @@ class AppointmentAdapter extends TypeAdapter<Appointment> {
       ..writeByte(7)
       ..write(obj.notes)
       ..writeByte(8)
-      ..write(obj.status);
+      ..write(obj.status)
+      ..writeByte(9)
+      ..write(obj.pauseDurationMinutes);
   }
 
   @override
