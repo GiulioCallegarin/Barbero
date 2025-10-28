@@ -7,6 +7,27 @@ import 'package:barbero/widgets/styled_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'dart:convert';
+
+class AddedService {
+  int? typeId;
+  String name;
+  int durationMinutes; // fixed from appointment type default
+  int pauseAfterMinutes; // gap after this service (tempo di posa)
+  AddedService({this.typeId, this.name = '', this.durationMinutes = 0, this.pauseAfterMinutes = 0});
+  Map<String, dynamic> toJson() => {
+        'typeId': typeId,
+        'name': name,
+        'duration': durationMinutes,
+        'pauseAfter': pauseAfterMinutes,
+      };
+  static AddedService fromJson(Map<String, dynamic> j) => AddedService(
+        typeId: j['typeId'] as int?,
+        name: (j['name'] as String?) ?? '',
+        durationMinutes: (j['duration'] as int?) ?? 0,
+        pauseAfterMinutes: (j['pauseAfter'] as int?) ?? 0,
+      );
+}
 
 class EditAppointmentPage extends StatefulWidget {
   final DateTime? timeSlot;
@@ -26,9 +47,9 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
   late DateTime selectedDate;
   int? selectedClientId;
   int? selectedTypeId;
-
-  final TextEditingController priceController = TextEditingController();
   final TextEditingController durationController = TextEditingController();
+  // multiple services support: a list of added service entries (each has its own type and duration)
+  final List<AddedService> addedServices = [];
   // pause duration in minutes (tempo di posa), between 0 and 180
   int pauseDurationMinutes = 0;
 
@@ -40,7 +61,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     appointmentTypeBox = Hive.box<AppointmentType>('appointmentTypes');
     selectedDate = widget.timeSlot ?? DateTime.now();
 
-    if (widget.appointment != null) {
+  if (widget.appointment != null) {
       selectedDate = widget.appointment!.date;
       selectedClientId = widget.appointment!.clientId;
       selectedTypeId =
@@ -50,9 +71,27 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 orElse: () => appointmentTypeBox.values.first,
               )
               .id;
-      priceController.text = widget.appointment!.price.toString();
-      durationController.text = widget.appointment!.duration.toString();
-      pauseDurationMinutes = widget.appointment!.pauseDurationMinutes;
+  durationController.text = widget.appointment!.duration.toString();
+  pauseDurationMinutes = widget.appointment!.pauseDurationMinutes;
+      // If this appointment contains serialized services in notes, restore them
+      try {
+        if (widget.appointment!.notes != null && widget.appointment!.notes!.isNotEmpty) {
+          final parsed = jsonDecode(widget.appointment!.notes!);
+          if (parsed is Map && parsed['services'] is List) {
+            final services = parsed['services'] as List;
+            addedServices.clear();
+            for (final s in services) {
+              if (s is Map<String, dynamic>) {
+                addedServices.add(AddedService.fromJson(s));
+              } else if (s is Map) {
+                addedServices.add(AddedService.fromJson(Map<String, dynamic>.from(s)));
+              }
+            }
+          }
+        }
+      } catch (_) {
+        // ignore malformed notes
+      }
     }
   }
 
@@ -64,9 +103,19 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       return;
     }
 
-    final price = double.tryParse(priceController.text) ?? 0.0;
-    final duration = int.tryParse(durationController.text) ?? 0;
-    final appointmentType = appointmentTypeBox.get(selectedTypeId);
+    // price removed: store 0.0 (prices are not set at appointment creation)
+    final price = 0.0;
+    // compute duration: if user added services, sum those durations, otherwise use typed duration or selected type default
+    int duration = int.tryParse(durationController.text) ?? 0;
+    if (addedServices.isNotEmpty) {
+      duration = addedServices.map((s) => s.durationMinutes + s.pauseAfterMinutes).fold(0, (a, b) => a + b);
+    } else if (selectedTypeId != null && duration == 0) {
+      final sel = appointmentTypeBox.get(selectedTypeId);
+      duration = sel?.defaultDuration ?? duration;
+    }
+    final appointmentType = selectedTypeId != null
+        ? appointmentTypeBox.get(selectedTypeId)
+        : null;
 
     final localDate = selectedDate;
 
@@ -74,11 +123,24 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       final appt = widget.appointment!;
       appt.date = localDate;
       appt.clientId = selectedClientId!;
-      appt.appointmentType = appointmentType?.name ?? '';
-      appt.appointmentTypeId = selectedTypeId!;
-      appt.price = price;
-      appt.duration = duration;
-      appt.pauseDurationMinutes = pauseDurationMinutes;
+    // if multiple services were added, store a joined representation in appointmentType
+    appt.appointmentType = addedServices.isNotEmpty
+      ? addedServices.map((s) => s.name).where((n) => n.isNotEmpty).join(' + ')
+      : (appointmentType?.name ?? '');
+    appt.appointmentTypeId = addedServices.isNotEmpty
+      ? (addedServices.first.typeId ?? 0)
+      : (selectedTypeId ?? 0);
+    appt.price = price; // kept as 0.0
+    appt.duration = duration;
+      // store sum of pauses for backward compatibility
+      appt.pauseDurationMinutes = addedServices.isNotEmpty
+          ? addedServices.map((s) => s.pauseAfterMinutes).fold(0, (a, b) => a + b)
+          : pauseDurationMinutes;
+      // serialize services into notes so calendar can reconstruct segments
+      if (addedServices.isNotEmpty) {
+        final data = {'services': addedServices.map((s) => s.toJson()).toList()};
+        appt.notes = jsonEncode(data);
+      }
       appointmentBox.put(appt.id, appt);
     } else {
       final newId =
@@ -92,13 +154,23 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         id: newId,
         date: localDate,
         clientId: selectedClientId!,
-        appointmentType: appointmentType?.name ?? '',
-        appointmentTypeId: selectedTypeId!,
-        price: price,
-        duration: duration,
+    appointmentType: addedServices.isNotEmpty
+      ? addedServices.map((s) => s.name).where((n) => n.isNotEmpty).join(' + ')
+      : (appointmentType?.name ?? ''),
+    appointmentTypeId: addedServices.isNotEmpty
+      ? (addedServices.first.typeId ?? 0)
+      : (selectedTypeId ?? 0),
+    price: price,
+    duration: duration,
         status: AppointmentStatus.pending,
-        pauseDurationMinutes: pauseDurationMinutes,
+        pauseDurationMinutes: addedServices.isNotEmpty
+            ? addedServices.map((s) => s.pauseAfterMinutes).fold(0, (a, b) => a + b)
+            : pauseDurationMinutes,
       );
+      if (addedServices.isNotEmpty) {
+        final data = {'services': addedServices.map((s) => s.toJson()).toList()};
+        newAppointment.notes = jsonEncode(data);
+      }
       appointmentBox.put(newId, newAppointment);
     }
 
@@ -167,7 +239,6 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                   setState(() {
                     selectedClientId = value;
                     selectedTypeId = null;
-                    priceController.clear();
                     durationController.clear();
                   });
                 },
@@ -187,7 +258,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 },
                 decoratorProps: DropDownDecoratorProps(
                   decoration: InputDecoration(
-                    labelText: 'Select Client',
+                    labelText: 'Seleziona Cliente',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
@@ -228,9 +299,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                     final type = appointmentTypeBox.get(item);
                     return ListTile(
                       title: Text(type?.name ?? ''),
-                      subtitle: Text(
-                        '€${type?.defaultPrice} • ${type?.defaultDuration} mins',
-                      ),
+                      subtitle: Text('${type?.defaultDuration} mins'),
                     );
                   },
                 ),
@@ -238,7 +307,6 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                   setState(() {
                     selectedTypeId = value;
                     final type = appointmentTypeBox.get(value);
-                    priceController.text = type?.defaultPrice.toString() ?? '';
                     durationController.text =
                         type?.defaultDuration.toString() ?? '';
                   });
@@ -249,7 +317,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 },
                 decoratorProps: DropDownDecoratorProps(
                   decoration: InputDecoration(
-                    labelText: 'Select Type',
+                    labelText: 'Seleziona Servizio',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
@@ -292,11 +360,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              StyledTextField(
-                label: 'Price',
-                controller: priceController,
-                keyboardType: TextInputType.number,
-              ),
+              // Price removed from appointment creation UI
               const SizedBox(height: 16),
               StyledTextField(
                 label: 'Duration',
@@ -307,10 +371,6 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
               // Pause duration (tempo di posa) sliders
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  'Pause Duration (Tempo di posa)',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
               ),
               const SizedBox(height: 8),
               Row(
@@ -319,7 +379,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Hours: ${pauseDurationMinutes ~/ 60}'),
+                        Text('Ore: ${pauseDurationMinutes ~/ 60}'),
                         Slider(
                           value: (pauseDurationMinutes ~/ 60).toDouble(),
                           min: 0,
@@ -342,7 +402,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Minutes: ${pauseDurationMinutes % 60}'),
+                        Text('Minuti: ${pauseDurationMinutes % 60}'),
                         Slider(
                           value: (pauseDurationMinutes % 60).toDouble(),
                           min: 0,
@@ -369,8 +429,197 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  'Total pause: ${pauseDurationMinutes ~/ 60}h ${pauseDurationMinutes % 60}m',
+                  'Tempo totale: ${pauseDurationMinutes ~/ 60}h ${pauseDurationMinutes % 60}m',
                 ),
+              ),
+              const SizedBox(height: 16),
+              // Added services list and add-button
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Servizi aggiunti',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Column(
+                children: [
+                  // render each added service as its own card with a dropdown and sliders
+                  ...addedServices.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final service = entry.value;
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownSearch<int>(
+                                    selectedItem: service.typeId,
+                                    items: (filter, infiniteScrollProps) =>
+                                        appointmentTypeBox.values
+                                            .map((t) => t.id)
+                                            .toList(),
+                                    popupProps: PopupProps.menu(
+                                      showSelectedItems: true,
+                                      showSearchBox: true,
+                                      itemBuilder:
+                                          (context, item, isSelected, search) {
+                                        final type =
+                                            appointmentTypeBox.get(item);
+                                        return ListTile(
+                                          title: Text(type?.name ?? ''),
+                                          subtitle: Text(
+                                              '${type?.defaultDuration} mins'),
+                                        );
+                                      },
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        service.typeId = value;
+                                        final t = appointmentTypeBox.get(value);
+                                        service.name = t?.name ?? '';
+                                        // Set service duration from the selected type's default
+                                        service.durationMinutes = t?.defaultDuration ?? 0;
+                                        durationController.text = addedServices
+                                            .map((s) => s.durationMinutes + s.pauseAfterMinutes)
+                                            .fold(0, (a, b) => a + b)
+                                            .toString();
+                                      });
+                                    },
+                                    dropdownBuilder: (context, selectedItem) {
+                                      final type =
+                                          appointmentTypeBox.get(selectedItem);
+                                      return Text(type?.name ?? '');
+                                    },
+                                    decoratorProps: DropDownDecoratorProps(
+                                      decoration: InputDecoration(
+                                        labelText: 'Select Type',
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10.0),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () {
+                                    setState(() {
+                                      addedServices.removeAt(idx);
+                                      durationController.text = addedServices
+                                          .map((s) => s.durationMinutes)
+                                          .fold(0, (a, b) => a + b)
+                                          .toString();
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            // show pause sliders only (tempo di posa) after the service
+                            if (service.typeId != null)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Durata servizio: ${service.durationMinutes} min'),
+                                  const SizedBox(height: 8),
+                                  Text('Tempo post servizio: ${service.pauseAfterMinutes ~/ 60}h ${service.pauseAfterMinutes % 60}m'),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Ore: ${service.pauseAfterMinutes ~/ 60}'),
+                                            Slider(
+                                              value: (service.pauseAfterMinutes ~/ 60).toDouble(),
+                                              min: 0,
+                                              max: 3,
+                                              divisions: 3,
+                                              label: '${service.pauseAfterMinutes ~/ 60}h',
+                                              onChanged: (v) {
+                                                setState(() {
+                                                  final hours = v.toInt();
+                                                  final minutesPart = service.pauseAfterMinutes % 60;
+                                                  service.pauseAfterMinutes = hours * 60 + minutesPart;
+                                                  durationController.text = addedServices
+                                                      .map((s) => s.durationMinutes + s.pauseAfterMinutes)
+                                                      .fold(0, (a, b) => a + b)
+                                                      .toString();
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Minuti: ${service.pauseAfterMinutes % 60}'),
+                                            Slider(
+                                              value: (service.pauseAfterMinutes % 60).toDouble(),
+                                              min: 0,
+                                              max: 55,
+                                              divisions: 11,
+                                              label: '${service.pauseAfterMinutes % 60}m',
+                                              onChanged: (v) {
+                                                setState(() {
+                                                  final snapped = (v / 5).round() * 5;
+                                                  final hours = service.pauseAfterMinutes ~/ 60;
+                                                  service.pauseAfterMinutes = hours * 60 + snapped;
+                                                  if (service.pauseAfterMinutes > 180) {
+                                                    service.pauseAfterMinutes = 180;
+                                                  }
+                                                  durationController.text = addedServices
+                                                      .map((s) => s.durationMinutes + s.pauseAfterMinutes)
+                                                      .fold(0, (a, b) => a + b)
+                                                      .toString();
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          // add an empty service entry; user will select type in the new card
+                          addedServices.add(AddedService());
+                        });
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Aggiungi servizio'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
               const SizedBox(height: 32),
@@ -388,7 +637,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                           ),
                         ),
                         child: const Text(
-                          'Mark as Completed',
+                          'Completato',
                           style: TextStyle(fontSize: 16),
                         ),
                       ),
@@ -405,7 +654,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                           ),
                         ),
                         child: const Text(
-                          'Delete',
+                          'Cancella',
                           style: TextStyle(fontSize: 16),
                         ),
                       ),
@@ -424,7 +673,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text('Confirm', style: TextStyle(fontSize: 18)),
+                  child: const Text('Conferma', style: TextStyle(fontSize: 18)),
                 ),
               ),
             ],

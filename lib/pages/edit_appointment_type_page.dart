@@ -19,7 +19,6 @@ class EditAppointmentTypePage extends StatefulWidget {
 
 class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
   final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
   final _durationController = TextEditingController();
   String _selectedTarget = 'all'; // Default value
 
@@ -28,7 +27,6 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
     super.initState();
     if (widget.appointmentType != null) {
       _nameController.text = widget.appointmentType!.name.trim();
-      _priceController.text = widget.appointmentType!.defaultPrice.toString();
       _durationController.text =
           widget.appointmentType!.defaultDuration.toString();
       _selectedTarget = widget.appointmentType!.target;
@@ -36,9 +34,7 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
   }
 
   void saveAppointmentType() async {
-    if (_nameController.text.isEmpty ||
-        _priceController.text.isEmpty ||
-        _durationController.text.isEmpty) {
+    if (_nameController.text.isEmpty || _durationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tutti i campi sono obbligatori')),
       );
@@ -47,19 +43,18 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
 
     if (widget.appointmentType == null) {
       int newId = await AppointmentType.getNextId();
+      // When creating a new type we no longer ask for a price in the UI.
+      // Set defaultPrice to 0.0 for new types.
       final newType = AppointmentType(
         id: newId,
         name: _nameController.text,
-        defaultPrice: double.parse(_priceController.text),
+        defaultPrice: 0.0,
         defaultDuration: int.parse(_durationController.text),
         target: _selectedTarget, // Save selected gender
       );
       widget.box.put(newId, newType);
     } else {
       widget.appointmentType!.name = _nameController.text;
-      widget.appointmentType!.defaultPrice = double.parse(
-        _priceController.text,
-      );
       widget.appointmentType!.defaultDuration = int.parse(
         _durationController.text,
       );
@@ -88,11 +83,6 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
           spacing: 20,
           children: [
             StyledTextField(label: 'Nome', controller: _nameController),
-            StyledTextField(
-              label: 'Prezzo predefinito',
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-            ),
             StyledTextField(
               label: 'Durata predefinita (minuti)',
               controller: _durationController,

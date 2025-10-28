@@ -1,5 +1,6 @@
 import 'package:barbero/models/client.dart';
 import 'package:barbero/pages/edit_appointment_page.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/adapters.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -73,56 +74,55 @@ class AppointmentsPageState extends State<AppointmentsPage> {
     for (final appt in appointments) {
       final client = clientBox.get(appt.clientId);
       final startTime = appt.date;
-      final totalDuration = appt.duration;
-      final pause = appt.pauseDurationMinutes.clamp(0, 180);
 
-      // If no pause, add single appointment segment
-      if (pause <= 0) {
-        calendarStateAppointments.add(
-          Appointment(
-            id: appt.id,
-            startTime: startTime,
-            endTime: startTime.add(Duration(minutes: totalDuration)),
-            subject:
-                '${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - ${appt.appointmentType}',
-            color: getStatusColor(appt.status),
-          ),
-        );
-        continue;
+      // If appointment has serialized services in notes, reconstruct segments sequentially
+      bool handled = false;
+      try {
+        if (appt.notes != null && appt.notes!.isNotEmpty) {
+          final parsed = jsonDecode(appt.notes!);
+          if (parsed is Map && parsed['services'] is List) {
+            DateTime cursor = startTime;
+            final services = parsed['services'] as List;
+            for (final s in services) {
+              final mp = s is Map<String, dynamic> ? s : Map<String, dynamic>.from(s);
+              final name = (mp['name'] as String?) ?? appt.appointmentType;
+              final dur = (mp['duration'] as int?) ?? 0;
+              final pauseAfter = (mp['pauseAfter'] as int?) ?? 0;
+              if (dur > 0) {
+                calendarStateAppointments.add(
+                  Appointment(
+                    id: appt.id,
+                    startTime: cursor,
+                    endTime: cursor.add(Duration(minutes: dur)),
+                    subject: '${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - $name',
+                    color: getStatusColor(appt.status),
+                  ),
+                );
+              }
+              // advance cursor by dur + pauseAfter; but DO NOT add a calendar block for the pause
+              cursor = cursor.add(Duration(minutes: dur + pauseAfter));
+            }
+            handled = true;
+          }
+        }
+      } catch (_) {
+        handled = false;
       }
 
-      // compute segments: service first, then pause appended after the service
-      final serviceDuration = totalDuration;
-      final serviceStart = startTime;
-      final serviceEnd = serviceStart.add(Duration(minutes: serviceDuration));
+      if (handled) continue;
 
-      final pauseStart = serviceEnd;
-      final pauseEnd = pauseStart.add(Duration(minutes: pause));
-
-      // service segment (normal appointment color)
+      // fallback: single segment for the whole appointment duration (pauses already summed into appt.duration)
+      final totalDuration = appt.duration;
       calendarStateAppointments.add(
         Appointment(
           id: appt.id,
-          startTime: serviceStart,
-          endTime: serviceEnd,
+          startTime: startTime,
+          endTime: startTime.add(Duration(minutes: totalDuration)),
           subject:
               '${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - ${appt.appointmentType}',
           color: getStatusColor(appt.status),
         ),
       );
-
-      // pause segment (gray, indicates unavailability after the service)
-      if (pause > 0) {
-        calendarStateAppointments.add(
-          Appointment(
-            id: appt.id,
-            startTime: pauseStart,
-            endTime: pauseEnd,
-            subject: 'Pausa',
-            color: Colors.grey.shade400,
-          ),
-        );
-      }
     }
 
     return calendarStateAppointments;
@@ -134,29 +134,69 @@ class AppointmentsPageState extends State<AppointmentsPage> {
       appBar: AppBar(title: const Text('Appuntamenti')),
       body: Column(
         children: [
-          TableCalendar(
-            headerStyle: HeaderStyle(formatButtonVisible: false),
-            selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-            focusedDay: _selectedDate,
-            firstDay: DateTime(2000),
-            lastDay: DateTime(2100),
-            eventLoader: (day) => getAppointmentsForDay(day),
-            calendarStyle: CalendarStyle(
-              markerDecoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.inversePrimary,
-                shape: BoxShape.circle,
+          // modern calendar header container with subtle gradient
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                  Theme.of(context).colorScheme.secondary.withOpacity(0.06),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            availableGestures: AvailableGestures.all,
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() => _selectedDate = selectedDay);
-            },
-            calendarFormat: _calendarFormat,
-            onFormatChanged: (format) {
-              setState(() {
-                _calendarFormat = format;
-              });
-            },
+            child: TableCalendar(
+              locale: 'it_IT',
+              headerStyle: HeaderStyle(
+                formatButtonVisible: false,
+                titleTextStyle: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+              focusedDay: _selectedDate,
+              firstDay: DateTime(2000),
+              lastDay: DateTime(2100),
+              eventLoader: (day) => getAppointmentsForDay(day),
+              calendarStyle: CalendarStyle(
+                markerDecoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.inversePrimary,
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.18),
+                  shape: BoxShape.circle,
+                ),
+                selectedDecoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                outsideDaysVisible: false,
+              ),
+              availableGestures: AvailableGestures.all,
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() => _selectedDate = selectedDay);
+              },
+              calendarFormat: _calendarFormat,
+              onFormatChanged: (format) {
+                setState(() {
+                  _calendarFormat = format;
+                });
+              },
+            ),
           ),
           const SizedBox(height: 10),
           Expanded(
@@ -165,21 +205,30 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                 Expanded(
                   child: ListView(
                     children:
-                        getAppointmentsForDay(_selectedDate).map((appt) {
-                          final client = clientBox.get(appt.clientId);
-                          final time =
-                              "${appt.date.hour.toString().padLeft(2, '0')}:${appt.date.minute.toString().padLeft(2, '0')}";
-                          return ListTile(
-                            title: Text(
-                              "${client?.firstName ?? ''} ${client?.lastName ?? ''}",
-                            ),
-                            subtitle: Text('Ora: $time'),
-                            trailing: Text(appt.appointmentType),
-                            onTap:
-                                () =>
-                                    showEditAppointmentPage(appointment: appt),
-                          );
-                        }).toList(),
+                          getAppointmentsForDay(_selectedDate).map((appt) {
+                            final client = clientBox.get(appt.clientId);
+                            final time =
+                                "${appt.date.hour.toString().padLeft(2, '0')}:${appt.date.minute.toString().padLeft(2, '0')}";
+                            return ListTile(
+                              title: Text(
+                                "${client?.firstName ?? ''} ${client?.lastName ?? ''}",
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              subtitle: Text('Ore: $time'),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Chip(
+                                    label: Text('${appt.duration} min'),
+                                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                                  ),
+                                ],
+                              ),
+                              onTap:
+                                  () =>
+                                      showEditAppointmentPage(appointment: appt),
+                            );
+                          }).toList(),
                   ),
                 ),
                 SizedBox(
