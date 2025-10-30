@@ -14,19 +14,24 @@ class AddedService {
   String name;
   int durationMinutes; // fixed from appointment type default
   int pauseAfterMinutes; // gap after this service (tempo di posa)
-  AddedService({this.typeId, this.name = '', this.durationMinutes = 0, this.pauseAfterMinutes = 0});
+  AddedService({
+    this.typeId,
+    this.name = '',
+    this.durationMinutes = 0,
+    this.pauseAfterMinutes = 0,
+  });
   Map<String, dynamic> toJson() => {
-        'typeId': typeId,
-        'name': name,
-        'duration': durationMinutes,
-        'pauseAfter': pauseAfterMinutes,
-      };
+    'typeId': typeId,
+    'name': name,
+    'duration': durationMinutes,
+    'pauseAfter': pauseAfterMinutes,
+  };
   static AddedService fromJson(Map<String, dynamic> j) => AddedService(
-        typeId: j['typeId'] as int?,
-        name: (j['name'] as String?) ?? '',
-        durationMinutes: (j['duration'] as int?) ?? 0,
-        pauseAfterMinutes: (j['pauseAfter'] as int?) ?? 0,
-      );
+    typeId: j['typeId'] as int?,
+    name: (j['name'] as String?) ?? '',
+    durationMinutes: (j['duration'] as int?) ?? 0,
+    pauseAfterMinutes: (j['pauseAfter'] as int?) ?? 0,
+  );
 }
 
 class EditAppointmentPage extends StatefulWidget {
@@ -61,21 +66,15 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     appointmentTypeBox = Hive.box<AppointmentType>('appointmentTypes');
     selectedDate = widget.timeSlot ?? DateTime.now();
 
-  if (widget.appointment != null) {
+    if (widget.appointment != null) {
       selectedDate = widget.appointment!.date;
       selectedClientId = widget.appointment!.clientId;
-      selectedTypeId =
-          appointmentTypeBox.values
-              .firstWhere(
-                (type) => type.name == widget.appointment!.appointmentType,
-                orElse: () => appointmentTypeBox.values.first,
-              )
-              .id;
-  durationController.text = widget.appointment!.duration.toString();
-  pauseDurationMinutes = widget.appointment!.pauseDurationMinutes;
+      durationController.text = widget.appointment!.duration.toString();
+      pauseDurationMinutes = widget.appointment!.pauseDurationMinutes;
       // If this appointment contains serialized services in notes, restore them
       try {
-        if (widget.appointment!.notes != null && widget.appointment!.notes!.isNotEmpty) {
+        if (widget.appointment!.notes != null &&
+            widget.appointment!.notes!.isNotEmpty) {
           final parsed = jsonDecode(widget.appointment!.notes!);
           if (parsed is Map && parsed['services'] is List) {
             final services = parsed['services'] as List;
@@ -84,7 +83,22 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
               if (s is Map<String, dynamic>) {
                 addedServices.add(AddedService.fromJson(s));
               } else if (s is Map) {
-                addedServices.add(AddedService.fromJson(Map<String, dynamic>.from(s)));
+                addedServices.add(
+                  AddedService.fromJson(Map<String, dynamic>.from(s)),
+                );
+              }
+            }
+            // If notes contained a main service as first element, extract it into selectedTypeId
+            if (addedServices.isNotEmpty) {
+              final first = addedServices.first;
+              if (first.typeId != null) {
+                selectedTypeId = first.typeId;
+                // preserve the main service pause value into the global pause slider
+                pauseDurationMinutes = first.pauseAfterMinutes;
+                // remove main service from addedServices so UI shows it as the main selected type
+                addedServices.removeAt(0);
+                // update duration controller to reflect durations only
+                durationController.text = computeTotalDuration().toString();
               }
             }
           }
@@ -92,7 +106,33 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       } catch (_) {
         // ignore malformed notes
       }
+      // If we didn't get selectedTypeId from notes, fallback to appointmentType string
+      selectedTypeId ??=
+          appointmentTypeBox.values
+              .firstWhere(
+                (type) => type.name == widget.appointment!.appointmentType,
+                orElse: () => appointmentTypeBox.values.first,
+              )
+              .id;
     }
+  }
+
+  // Compute total duration including the main selected type (if any)
+  // sum only durations (exclude pauses)
+  int computeAddedServicesDurationsSum() {
+    if (addedServices.isEmpty) return 0;
+    return addedServices.map((s) => s.durationMinutes).fold(0, (a, b) => a + b);
+  }
+
+  int computeTotalDuration() {
+    // total should be sum of service durations only (do not include pauses)
+    int total = 0;
+    if (selectedTypeId != null) {
+      final sel = appointmentTypeBox.get(selectedTypeId);
+      total += sel?.defaultDuration ?? 0;
+    }
+    total += computeAddedServicesDurationsSum();
+    return total;
   }
 
   void saveAppointment() {
@@ -108,14 +148,14 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     // compute duration: if user added services, sum those durations, otherwise use typed duration or selected type default
     int duration = int.tryParse(durationController.text) ?? 0;
     if (addedServices.isNotEmpty) {
-      duration = addedServices.map((s) => s.durationMinutes + s.pauseAfterMinutes).fold(0, (a, b) => a + b);
+      // include the main selected service (if any) plus all added services and their pauses
+      duration = computeTotalDuration();
     } else if (selectedTypeId != null && duration == 0) {
       final sel = appointmentTypeBox.get(selectedTypeId);
       duration = sel?.defaultDuration ?? duration;
     }
-    final appointmentType = selectedTypeId != null
-        ? appointmentTypeBox.get(selectedTypeId)
-        : null;
+    final appointmentType =
+        selectedTypeId != null ? appointmentTypeBox.get(selectedTypeId) : null;
 
     final localDate = selectedDate;
 
@@ -123,22 +163,51 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       final appt = widget.appointment!;
       appt.date = localDate;
       appt.clientId = selectedClientId!;
-    // if multiple services were added, store a joined representation in appointmentType
-    appt.appointmentType = addedServices.isNotEmpty
-      ? addedServices.map((s) => s.name).where((n) => n.isNotEmpty).join(' + ')
-      : (appointmentType?.name ?? '');
-    appt.appointmentTypeId = addedServices.isNotEmpty
-      ? (addedServices.first.typeId ?? 0)
-      : (selectedTypeId ?? 0);
-    appt.price = price; // kept as 0.0
-    appt.duration = duration;
-      // store sum of pauses for backward compatibility
-      appt.pauseDurationMinutes = addedServices.isNotEmpty
-          ? addedServices.map((s) => s.pauseAfterMinutes).fold(0, (a, b) => a + b)
-          : pauseDurationMinutes;
+      // if multiple services were added, store a joined representation in appointmentType
+      if (addedServices.isNotEmpty) {
+        // include main selected service as first element in the representation
+        final List<String> names = [];
+        if (selectedTypeId != null) {
+          final main = appointmentTypeBox.get(selectedTypeId);
+          if (main != null && main.name.isNotEmpty) names.add(main.name);
+        }
+        names.addAll(
+          addedServices.map((s) => s.name).where((n) => n.isNotEmpty),
+        );
+        appt.appointmentType = names.join(' + ');
+        appt.appointmentTypeId =
+            selectedTypeId ?? (addedServices.first.typeId ?? 0);
+      } else {
+        appt.appointmentType = appointmentType?.name ?? '';
+        appt.appointmentTypeId = selectedTypeId ?? 0;
+      }
+      appt.price = price; // kept as 0.0
+      appt.duration = duration;
+      // store sum of pauses: include main pauseDurationMinutes plus pauses from added services
+      appt.pauseDurationMinutes =
+          addedServices.isNotEmpty
+              ? (pauseDurationMinutes +
+                  addedServices
+                      .map((s) => s.pauseAfterMinutes)
+                      .fold(0, (a, b) => a + b))
+              : pauseDurationMinutes;
       // serialize services into notes so calendar can reconstruct segments
       if (addedServices.isNotEmpty) {
-        final data = {'services': addedServices.map((s) => s.toJson()).toList()};
+        final servicesForNotes = <Map<String, dynamic>>[];
+        // include main selected service first (if any) with its pauseDurationMinutes
+        if (selectedTypeId != null) {
+          final main = appointmentTypeBox.get(selectedTypeId);
+          if (main != null) {
+            servicesForNotes.add({
+              'typeId': main.id,
+              'name': main.name,
+              'duration': main.defaultDuration,
+              'pauseAfter': pauseDurationMinutes,
+            });
+          }
+        }
+        servicesForNotes.addAll(addedServices.map((s) => s.toJson()));
+        final data = {'services': servicesForNotes};
         appt.notes = jsonEncode(data);
       }
       appointmentBox.put(appt.id, appt);
@@ -154,21 +223,51 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         id: newId,
         date: localDate,
         clientId: selectedClientId!,
-    appointmentType: addedServices.isNotEmpty
-      ? addedServices.map((s) => s.name).where((n) => n.isNotEmpty).join(' + ')
-      : (appointmentType?.name ?? ''),
-    appointmentTypeId: addedServices.isNotEmpty
-      ? (addedServices.first.typeId ?? 0)
-      : (selectedTypeId ?? 0),
-    price: price,
-    duration: duration,
+        appointmentType:
+            addedServices.isNotEmpty
+                ? (() {
+                  final List<String> names = [];
+                  if (selectedTypeId != null) {
+                    final main = appointmentTypeBox.get(selectedTypeId);
+                    if (main != null && main.name.isNotEmpty) {
+                      names.add(main.name);
+                    }
+                  }
+                  names.addAll(
+                    addedServices.map((s) => s.name).where((n) => n.isNotEmpty),
+                  );
+                  return names.join(' + ');
+                })()
+                : (appointmentType?.name ?? ''),
+        appointmentTypeId:
+            selectedTypeId ??
+            (addedServices.isNotEmpty ? (addedServices.first.typeId ?? 0) : 0),
+        price: price,
+        duration: duration,
         status: AppointmentStatus.pending,
-        pauseDurationMinutes: addedServices.isNotEmpty
-            ? addedServices.map((s) => s.pauseAfterMinutes).fold(0, (a, b) => a + b)
-            : pauseDurationMinutes,
+        pauseDurationMinutes:
+            addedServices.isNotEmpty
+                ? (pauseDurationMinutes +
+                    addedServices
+                        .map((s) => s.pauseAfterMinutes)
+                        .fold(0, (a, b) => a + b))
+                : pauseDurationMinutes,
       );
       if (addedServices.isNotEmpty) {
-        final data = {'services': addedServices.map((s) => s.toJson()).toList()};
+        final servicesForNotes = <Map<String, dynamic>>[];
+        if (selectedTypeId != null) {
+          final main = appointmentTypeBox.get(selectedTypeId);
+          if (main != null) {
+            servicesForNotes.add({
+              'typeId': main.id,
+              'name': main.name,
+              'duration': main.defaultDuration,
+              'pauseAfter': pauseDurationMinutes,
+            });
+          }
+        }
+        servicesForNotes.addAll(addedServices.map((s) => s.toJson()));
+        final data = {'services': servicesForNotes};
         newAppointment.notes = jsonEncode(data);
       }
       appointmentBox.put(newId, newAppointment);
@@ -181,6 +280,16 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     if (widget.appointment != null) {
       setState(() {
         widget.appointment!.status = AppointmentStatus.done;
+        appointmentBox.put(widget.appointment!.id, widget.appointment!);
+      });
+      Navigator.pop(context);
+    }
+  }
+
+  void markAsCancelled() {
+    if (widget.appointment != null) {
+      setState(() {
+        widget.appointment!.status = AppointmentStatus.cancelled;
         appointmentBox.put(widget.appointment!.id, widget.appointment!);
       });
       Navigator.pop(context);
@@ -306,9 +415,8 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 onChanged: (value) {
                   setState(() {
                     selectedTypeId = value;
-                    final type = appointmentTypeBox.get(value);
-                    durationController.text =
-                        type?.defaultDuration.toString() ?? '';
+                    // update duration to include selected main service + any added services
+                    durationController.text = computeTotalDuration().toString();
                   });
                 },
                 dropdownBuilder: (context, selectedItem) {
@@ -363,15 +471,13 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
               // Price removed from appointment creation UI
               const SizedBox(height: 16),
               StyledTextField(
-                label: 'Duration',
+                label: 'Durata (Minuti)',
                 controller: durationController,
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
               // Pause duration (tempo di posa) sliders
-              Align(
-                alignment: Alignment.centerLeft,
-              ),
+              Align(alignment: Alignment.centerLeft),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -460,21 +566,28 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                                 Expanded(
                                   child: DropdownSearch<int>(
                                     selectedItem: service.typeId,
-                                    items: (filter, infiniteScrollProps) =>
-                                        appointmentTypeBox.values
-                                            .map((t) => t.id)
-                                            .toList(),
+                                    items:
+                                        (filter, infiniteScrollProps) =>
+                                            appointmentTypeBox.values
+                                                .map((t) => t.id)
+                                                .toList(),
                                     popupProps: PopupProps.menu(
                                       showSelectedItems: true,
                                       showSearchBox: true,
-                                      itemBuilder:
-                                          (context, item, isSelected, search) {
-                                        final type =
-                                            appointmentTypeBox.get(item);
+                                      itemBuilder: (
+                                        context,
+                                        item,
+                                        isSelected,
+                                        search,
+                                      ) {
+                                        final type = appointmentTypeBox.get(
+                                          item,
+                                        );
                                         return ListTile(
                                           title: Text(type?.name ?? ''),
                                           subtitle: Text(
-                                              '${type?.defaultDuration} mins'),
+                                            '${type?.defaultDuration} mins',
+                                          ),
                                         );
                                       },
                                     ),
@@ -484,24 +597,26 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                                         final t = appointmentTypeBox.get(value);
                                         service.name = t?.name ?? '';
                                         // Set service duration from the selected type's default
-                                        service.durationMinutes = t?.defaultDuration ?? 0;
-                                        durationController.text = addedServices
-                                            .map((s) => s.durationMinutes + s.pauseAfterMinutes)
-                                            .fold(0, (a, b) => a + b)
-                                            .toString();
+                                        service.durationMinutes =
+                                            t?.defaultDuration ?? 0;
+                                        // include main selected service as well
+                                        durationController.text =
+                                            computeTotalDuration().toString();
                                       });
                                     },
                                     dropdownBuilder: (context, selectedItem) {
-                                      final type =
-                                          appointmentTypeBox.get(selectedItem);
+                                      final type = appointmentTypeBox.get(
+                                        selectedItem,
+                                      );
                                       return Text(type?.name ?? '');
                                     },
                                     decoratorProps: DropDownDecoratorProps(
                                       decoration: InputDecoration(
                                         labelText: 'Select Type',
                                         border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10.0),
+                                          borderRadius: BorderRadius.circular(
+                                            10.0,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -512,10 +627,8 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                                   onPressed: () {
                                     setState(() {
                                       addedServices.removeAt(idx);
-                                      durationController.text = addedServices
-                                          .map((s) => s.durationMinutes)
-                                          .fold(0, (a, b) => a + b)
-                                          .toString();
+                                      durationController.text =
+                                          computeTotalDuration().toString();
                                     });
                                   },
                                 ),
@@ -527,9 +640,13 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Durata servizio: ${service.durationMinutes} min'),
+                                  Text(
+                                    'Durata servizio: ${service.durationMinutes} min',
+                                  ),
                                   const SizedBox(height: 8),
-                                  Text('Tempo post servizio: ${service.pauseAfterMinutes ~/ 60}h ${service.pauseAfterMinutes % 60}m'),
+                                  Text(
+                                    'Tempo post servizio: ${service.pauseAfterMinutes ~/ 60}h ${service.pauseAfterMinutes % 60}m',
+                                  ),
                                   Row(
                                     children: [
                                       Expanded(
@@ -537,22 +654,31 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text('Ore: ${service.pauseAfterMinutes ~/ 60}'),
+                                            Text(
+                                              'Ore: ${service.pauseAfterMinutes ~/ 60}',
+                                            ),
                                             Slider(
-                                              value: (service.pauseAfterMinutes ~/ 60).toDouble(),
+                                              value:
+                                                  (service.pauseAfterMinutes ~/
+                                                          60)
+                                                      .toDouble(),
                                               min: 0,
                                               max: 3,
                                               divisions: 3,
-                                              label: '${service.pauseAfterMinutes ~/ 60}h',
+                                              label:
+                                                  '${service.pauseAfterMinutes ~/ 60}h',
                                               onChanged: (v) {
                                                 setState(() {
                                                   final hours = v.toInt();
-                                                  final minutesPart = service.pauseAfterMinutes % 60;
-                                                  service.pauseAfterMinutes = hours * 60 + minutesPart;
-                                                  durationController.text = addedServices
-                                                      .map((s) => s.durationMinutes + s.pauseAfterMinutes)
-                                                      .fold(0, (a, b) => a + b)
-                                                      .toString();
+                                                  final minutesPart =
+                                                      service
+                                                          .pauseAfterMinutes %
+                                                      60;
+                                                  service.pauseAfterMinutes =
+                                                      hours * 60 + minutesPart;
+                                                  durationController.text =
+                                                      computeTotalDuration()
+                                                          .toString();
                                                 });
                                               },
                                             ),
@@ -565,25 +691,38 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text('Minuti: ${service.pauseAfterMinutes % 60}'),
+                                            Text(
+                                              'Minuti: ${service.pauseAfterMinutes % 60}',
+                                            ),
                                             Slider(
-                                              value: (service.pauseAfterMinutes % 60).toDouble(),
+                                              value:
+                                                  (service.pauseAfterMinutes %
+                                                          60)
+                                                      .toDouble(),
                                               min: 0,
                                               max: 55,
                                               divisions: 11,
-                                              label: '${service.pauseAfterMinutes % 60}m',
+                                              label:
+                                                  '${service.pauseAfterMinutes % 60}m',
                                               onChanged: (v) {
                                                 setState(() {
-                                                  final snapped = (v / 5).round() * 5;
-                                                  final hours = service.pauseAfterMinutes ~/ 60;
-                                                  service.pauseAfterMinutes = hours * 60 + snapped;
-                                                  if (service.pauseAfterMinutes > 180) {
-                                                    service.pauseAfterMinutes = 180;
+                                                  final snapped =
+                                                      (v / 5).round() * 5;
+                                                  final hours =
+                                                      service
+                                                          .pauseAfterMinutes ~/
+                                                      60;
+                                                  service.pauseAfterMinutes =
+                                                      hours * 60 + snapped;
+                                                  if (service
+                                                          .pauseAfterMinutes >
+                                                      180) {
+                                                    service.pauseAfterMinutes =
+                                                        180;
                                                   }
-                                                  durationController.text = addedServices
-                                                      .map((s) => s.durationMinutes + s.pauseAfterMinutes)
-                                                      .fold(0, (a, b) => a + b)
-                                                      .toString();
+                                                  durationController.text =
+                                                      computeTotalDuration()
+                                                          .toString();
                                                 });
                                               },
                                             ),
@@ -598,7 +737,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
@@ -660,6 +799,25 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                       ),
                     ),
                   ],
+                ),
+              const SizedBox(height: 12),
+              if (widget.appointment != null)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: markAsCancelled,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Annulla',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
                 ),
               if (widget.appointment != null) const SizedBox(height: 16),
               SizedBox(

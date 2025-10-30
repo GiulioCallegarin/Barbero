@@ -77,39 +77,47 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
               : 'Modifica tipo di servizio',
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          spacing: 20,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             StyledTextField(label: 'Nome', controller: _nameController),
+            const SizedBox(height: 12),
             StyledTextField(
               label: 'Durata predefinita (minuti)',
               controller: _durationController,
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 16),
             targetSelection(context),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(64.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annulla'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                saveAppointmentType();
-                exit();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.tertiary,
-              ),
-              child: const Text('Salva'),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Annulla'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    saveAppointmentType();
+                    exit();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Salva'),
+                ),
+              ],
             ),
           ],
         ),

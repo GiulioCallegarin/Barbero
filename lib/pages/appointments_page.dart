@@ -57,7 +57,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
       case barbero.AppointmentStatus.done:
         return Colors.green;
       case barbero.AppointmentStatus.cancelled:
-        return Colors.red;
+        return Colors.orange;
       case barbero.AppointmentStatus.noShow:
         return Colors.orange;
       case barbero.AppointmentStatus.notPaid:
@@ -65,6 +65,37 @@ class AppointmentsPageState extends State<AppointmentsPage> {
       default:
         return Colors.blue;
     }
+  }
+
+  // Deterministic color per client id so each client is visually distinct.
+  // If clientId is null or not found, fallback to a neutral color.
+  Color _colorForClient(int? clientId) {
+    final palette = [
+      Colors.teal,
+      Colors.indigo,
+      Colors.deepOrange,
+      Colors.cyan,
+      Colors.amber,
+      Colors.pink,
+      Colors.lightGreen,
+      Colors.lime,
+      Colors.blueGrey,
+      Colors.brown,
+    ];
+    if (clientId == null) return Colors.grey;
+    return palette[(clientId.abs()) % palette.length];
+  }
+
+  // Avoid using Color.withOpacity due to analyzer deprecation; construct ARGB directly.
+  Color _withOpacity(Color base, double opacity) {
+    int alpha = (opacity * 255).round();
+    if (alpha < 0) alpha = 0;
+    if (alpha > 255) alpha = 255;
+  final int v = base.toARGB32();
+  final int r = (v >> 16) & 0xFF;
+  final int g = (v >> 8) & 0xFF;
+  final int b = v & 0xFF;
+    return Color.fromARGB(alpha, r, g, b);
   }
 
   List<Appointment> generateCalendarAppointments() {
@@ -84,23 +115,33 @@ class AppointmentsPageState extends State<AppointmentsPage> {
             DateTime cursor = startTime;
             final services = parsed['services'] as List;
             for (final s in services) {
-              final mp = s is Map<String, dynamic> ? s : Map<String, dynamic>.from(s);
+              final mp =
+                  s is Map<String, dynamic> ? s : Map<String, dynamic>.from(s);
               final name = (mp['name'] as String?) ?? appt.appointmentType;
               final dur = (mp['duration'] as int?) ?? 0;
               final pauseAfter = (mp['pauseAfter'] as int?) ?? 0;
+              // Add the service block if it has a positive duration
               if (dur > 0) {
+                final serviceStart = cursor;
+                final serviceEnd = cursor.add(Duration(minutes: dur));
                 calendarStateAppointments.add(
                   Appointment(
                     id: appt.id,
-                    startTime: cursor,
-                    endTime: cursor.add(Duration(minutes: dur)),
-                    subject: '${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - $name',
-                    color: getStatusColor(appt.status),
+                    startTime: serviceStart,
+                    endTime: serviceEnd,
+                    subject:
+                        '${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - $name',
+                    color: _colorForClient(appt.clientId),
                   ),
                 );
+                // Do NOT add a calendar block for the pause: advance the cursor by dur + pauseAfter
+                // so the next service (if any) starts after the pause and the calendar shows
+                // that time as empty space.
+                cursor = cursor.add(Duration(minutes: dur + pauseAfter));
+              } else {
+                // if duration is zero, still advance cursor by pauseAfter to keep timeline consistent
+                cursor = cursor.add(Duration(minutes: pauseAfter));
               }
-              // advance cursor by dur + pauseAfter; but DO NOT add a calendar block for the pause
-              cursor = cursor.add(Duration(minutes: dur + pauseAfter));
             }
             handled = true;
           }
@@ -120,7 +161,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
           endTime: startTime.add(Duration(minutes: totalDuration)),
           subject:
               '${client?.firstName ?? 'Unknown'} ${client?.lastName ?? ''} - ${appt.appointmentType}',
-          color: getStatusColor(appt.status),
+          color: _colorForClient(appt.clientId),
         ),
       );
     }
@@ -141,8 +182,8 @@ class AppointmentsPageState extends State<AppointmentsPage> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Theme.of(context).colorScheme.primary.withOpacity(0.12),
-                  Theme.of(context).colorScheme.secondary.withOpacity(0.06),
+                  _withOpacity(Theme.of(context).colorScheme.primary, 0.12),
+                  _withOpacity(Theme.of(context).colorScheme.secondary, 0.06),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -150,7 +191,7 @@ class AppointmentsPageState extends State<AppointmentsPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: _withOpacity(Colors.black, 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 6),
                 ),
@@ -177,7 +218,9 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                   shape: BoxShape.circle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.18),
+                  color: _withOpacity(Theme.of(
+                    context,
+                  ).colorScheme.primary, 0.18),
                   shape: BoxShape.circle,
                 ),
                 selectedDecoration: BoxDecoration(
@@ -205,30 +248,104 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                 Expanded(
                   child: ListView(
                     children:
-                          getAppointmentsForDay(_selectedDate).map((appt) {
-                            final client = clientBox.get(appt.clientId);
-                            final time =
-                                "${appt.date.hour.toString().padLeft(2, '0')}:${appt.date.minute.toString().padLeft(2, '0')}";
-                            return ListTile(
-                              title: Text(
-                                "${client?.firstName ?? ''} ${client?.lastName ?? ''}",
-                                style: const TextStyle(fontWeight: FontWeight.w700),
+                        getAppointmentsForDay(_selectedDate).map((appt) {
+                          final client = clientBox.get(appt.clientId);
+                          final time =
+                              "${appt.date.hour.toString().padLeft(2, '0')}:${appt.date.minute.toString().padLeft(2, '0')}";
+                          return ListTile(
+                            title: Text(
+                              "${client?.firstName ?? ''} ${client?.lastName ?? ''}",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
                               ),
-                              subtitle: Text('Ore: $time'),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                            ),
+                            subtitle: Text('Ore: $time'),
+                            trailing: SizedBox(
+                              width: 160,
+                              height: 56,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Chip(
-                                    label: Text('${appt.duration} min'),
-                                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                                  Flexible(
+                                    fit: FlexFit.loose,
+                                    child: Chip(
+                                      label: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          appt.status ==
+                                                  barbero
+                                                      .AppointmentStatus
+                                                      .pending
+                                              ? 'In attesa'
+                                              : appt.status ==
+                                                  barbero.AppointmentStatus.done
+                                              ? 'Completato'
+                                              : appt.status ==
+                                                  barbero
+                                                      .AppointmentStatus
+                                                      .cancelled
+                                              ? 'Annullato'
+                                              : appt.status ==
+                                                  barbero
+                                                      .AppointmentStatus
+                                                      .noShow
+                                              ? 'No show'
+                                              : 'Non pagato',
+                                          style: TextStyle(
+                                            color: getStatusColor(appt.status),
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ),
+                                      backgroundColor: _withOpacity(
+                                        getStatusColor(
+                                          appt.status,
+                                        ),
+                                        0.12,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 6,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    fit: FlexFit.loose,
+                                    child: Chip(
+                                      label: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          '${appt.duration} min',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      backgroundColor: _withOpacity(
+                                        _colorForClient(
+                                          appt.clientId,
+                                        ),
+                                        0.16,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 6,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                              onTap:
-                                  () =>
-                                      showEditAppointmentPage(appointment: appt),
-                            );
-                          }).toList(),
+                            ),
+                            onTap:
+                                () =>
+                                    showEditAppointmentPage(appointment: appt),
+                          );
+                        }).toList(),
                   ),
                 ),
                 SizedBox(
@@ -236,6 +353,59 @@ class AppointmentsPageState extends State<AppointmentsPage> {
                   child: KeyedSubtree(
                     key: ValueKey(_selectedDate),
                     child: SfCalendar(
+                      appointmentBuilder: (context, details) {
+                        // details.appointments contains the appointment objects we created earlier
+                        final dynamic raw =
+                            details.appointments.isNotEmpty
+                                ? details.appointments.first
+                                : null;
+                        final subject = (raw?.subject ?? '').toString();
+                        // subject was built as 'ClientName - ServiceName'
+                        final parts = subject.split(' - ');
+                        final nameText = parts.isNotEmpty ? parts[0] : subject;
+                        final typeText =
+                            parts.length > 1
+                                ? parts.sublist(1).join(' - ')
+                                : '';
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                raw?.color ??
+                                Theme.of(context).colorScheme.primary,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                nameText,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              if (typeText.isNotEmpty)
+                                Text(
+                                  typeText,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                       initialDisplayDate: _selectedDate,
                       onViewChanged: (viewChangedDetails) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
