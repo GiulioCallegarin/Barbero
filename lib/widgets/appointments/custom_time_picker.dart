@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class CustomTimePicker extends StatelessWidget {
   final DateTime? selectedDate;
   final Function(DateTime) onTimeChanged;
+
   const CustomTimePicker({
     super.key,
     required this.selectedDate,
@@ -13,7 +14,14 @@ class CustomTimePicker extends StatelessWidget {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(selectedDate!),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        );
+      },
     );
+
     if (pickedTime != null &&
         pickedTime != TimeOfDay.fromDateTime(selectedDate!)) {
       final DateTime newDateTime = DateTime(
@@ -31,7 +39,6 @@ class CustomTimePicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      spacing: 20,
       children: [
         OutlinedButton(
           onPressed: () => _selectTime(context),
@@ -39,18 +46,22 @@ class CustomTimePicker extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
             ),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.12 * 255).round()),
+            ),
           ),
           child: Row(
             children: [
               Icon(
                 Icons.access_time,
-                color: Theme.of(context).colorScheme.inversePrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               const SizedBox(width: 10),
               Text(
                 '${selectedDate!.hour}:${selectedDate!.minute.toString().padLeft(2, '0')}',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.inversePrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],

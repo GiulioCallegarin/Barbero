@@ -16,57 +16,98 @@ class AppointmentTypesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // local helper to avoid using deprecated .withOpacity
+    Color withOpacity(Color base, double opacity) {
+      int alpha = (opacity * 255).round();
+      if (alpha < 0) alpha = 0;
+      if (alpha > 255) alpha = 255;
+  final int v = base.toARGB32();
+  final int r = (v >> 16) & 0xFF;
+  final int g = (v >> 8) & 0xFF;
+  final int b = v & 0xFF;
+      return Color.fromARGB(alpha, r, g, b);
+    }
     return ValueListenableBuilder(
       valueListenable: appointmentTypeBox.listenable(),
       builder: (context, Box<AppointmentType> box, _) {
         if (box.isEmpty) {
-          return const Center(child: Text('No appointment types added yet'));
+          return const Center(child: Text('Nessun tipo di servizio aggiunto'));
         }
         return ListView.builder(
           itemCount: box.length,
           itemBuilder: (context, index) {
             final key = box.keyAt(index) as int;
             final appointmentType = box.get(key)!;
+            final icon =
+                appointmentType.target == 'all'
+                    ? Icons.handshake_outlined
+                    : appointmentType.target == 'male'
+                    ? Icons.man_outlined
+                    : Icons.woman_outlined;
             return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ListTile(
-                title: Text(appointmentType.name),
-                subtitle: Text(
-                  'Price: €${appointmentType.defaultPrice}\nDuration: ${appointmentType.defaultDuration} mins',
-                ),
-                leading: Icon(
-                  appointmentType.target == 'all'
-                      ? Icons.circle_outlined
-                      : appointmentType.target == 'male'
-                      ? Icons.male_outlined
-                      : Icons.female_outlined,
-                ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 6.0,
+              ),
+              child: Card(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                tileColor: Theme.of(context).colorScheme.secondary,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.edit,
-                        color: Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                      onPressed:
-                          () => showEditAppointmentTypePage(
-                            context,
-                            type: appointmentType,
-                          ),
+                color: withOpacity(Theme.of(context).colorScheme.primary, 0.06),
+                elevation: 0,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Icon(
+                      icon,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 20,
                     ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.delete,
-                        color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    appointmentType.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Row(
+                    children: [
+                      Text(
+                        'Durata: ${appointmentType.defaultDuration} min',
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
-                      onPressed: () => deleteAppointmentType(context, key),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Text(
+                        'Prezzo: €${appointmentType.defaultPrice.toStringAsFixed(2)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.edit,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        onPressed:
+                            () => showEditAppointmentTypePage(
+                              context,
+                              type: appointmentType,
+                            ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        onPressed: () => deleteAppointmentType(context, key),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

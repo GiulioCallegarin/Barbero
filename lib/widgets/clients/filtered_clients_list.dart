@@ -20,11 +20,22 @@ class FilteredClientsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // local helper to avoid using deprecated .withOpacity
+    Color withOpacity(Color base, double opacity) {
+      int alpha = (opacity * 255).round();
+      if (alpha < 0) alpha = 0;
+      if (alpha > 255) alpha = 255;
+  final int v = base.toARGB32();
+  final int r = (v >> 16) & 0xFF;
+  final int g = (v >> 8) & 0xFF;
+  final int b = v & 0xFF;
+      return Color.fromARGB(alpha, r, g, b);
+    }
     return ValueListenableBuilder(
       valueListenable: clientBox.listenable(),
       builder: (context, Box<Client> box, _) {
         if (box.isEmpty) {
-          return const Center(child: Text('No Clients'));
+          return const Center(child: Text('Nessun cliente'));
         }
 
         final filteredClients =
@@ -41,49 +52,76 @@ class FilteredClientsList extends StatelessWidget {
         });
 
         if (filteredClients.isEmpty) {
-          return const Center(child: Text('No matching clients'));
+          return const Center(child: Text('Nessun cliente corrispondente'));
         }
 
         return ListView.builder(
           itemCount: filteredClients.length,
           itemBuilder: (context, index) {
             final client = filteredClients[index];
-            final clientKey = box.keyAt(index);
 
+            final initials =
+                '${client.firstName.isNotEmpty ? client.firstName[0] : ''}${client.lastName.isNotEmpty ? client.lastName[0] : ''}'
+                    .toUpperCase();
+            // client.key holds the Hive key for this object
+            final clientKeyActual = client.key as int;
             return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ListTile(
-                title: Text('${client.firstName} ${client.lastName}'),
-                subtitle: Text('${client.address}\n${client.phoneNumber}'),
-                leading: Icon(
-                  client.gender == 'male'
-                      ? Icons.man_outlined
-                      : Icons.woman_outlined,
-                ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 6.0,
+              ),
+              child: Card(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                tileColor: Theme.of(context).colorScheme.secondary,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.edit,
-                        color: Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                      onPressed: () => showEditClientPage(client),
+                color: withOpacity(Theme.of(context).colorScheme.primary, 0.06),
+                elevation: 0,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => showClientHistory(client),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.delete,
-                        color: Theme.of(context).colorScheme.error,
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: Text(
+                        initials,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
                       ),
-                      onPressed: () => deleteClient(clientKey),
                     ),
-                  ],
+                    title: Text(
+                      '${client.firstName} ${client.lastName}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      '${client.address}\n${client.phoneNumber}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.edit,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          onPressed: () => showEditClientPage(client),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          onPressed: () => deleteClient(clientKeyActual),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                onTap: () => showClientHistory(client),
               ),
             );
           },

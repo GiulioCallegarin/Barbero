@@ -19,7 +19,6 @@ class EditAppointmentTypePage extends StatefulWidget {
 
 class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
   final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
   final _durationController = TextEditingController();
   String _selectedTarget = 'all'; // Default value
 
@@ -28,7 +27,6 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
     super.initState();
     if (widget.appointmentType != null) {
       _nameController.text = widget.appointmentType!.name.trim();
-      _priceController.text = widget.appointmentType!.defaultPrice.toString();
       _durationController.text =
           widget.appointmentType!.defaultDuration.toString();
       _selectedTarget = widget.appointmentType!.target;
@@ -36,30 +34,27 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
   }
 
   void saveAppointmentType() async {
-    if (_nameController.text.isEmpty ||
-        _priceController.text.isEmpty ||
-        _durationController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('All fields are required!')));
+    if (_nameController.text.isEmpty || _durationController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tutti i campi sono obbligatori')),
+      );
       return;
     }
 
     if (widget.appointmentType == null) {
       int newId = await AppointmentType.getNextId();
+      // When creating a new type we no longer ask for a price in the UI.
+      // Set defaultPrice to 0.0 for new types.
       final newType = AppointmentType(
         id: newId,
         name: _nameController.text,
-        defaultPrice: double.parse(_priceController.text),
+        defaultPrice: 0.0,
         defaultDuration: int.parse(_durationController.text),
         target: _selectedTarget, // Save selected gender
       );
       widget.box.put(newId, newType);
     } else {
       widget.appointmentType!.name = _nameController.text;
-      widget.appointmentType!.defaultPrice = double.parse(
-        _priceController.text,
-      );
       widget.appointmentType!.defaultDuration = int.parse(
         _durationController.text,
       );
@@ -78,48 +73,51 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
       appBar: AppBar(
         title: Text(
           widget.appointmentType == null
-              ? 'Add Appointment Type'
-              : 'Edit Appointment Type',
+              ? 'Aggiungi tipo di servizio'
+              : 'Modifica tipo di servizio',
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          spacing: 20,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            StyledTextField(label: 'Name', controller: _nameController),
+            StyledTextField(label: 'Nome', controller: _nameController),
+            const SizedBox(height: 12),
             StyledTextField(
-              label: 'Default Price',
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-            ),
-            StyledTextField(
-              label: 'Default Duration (minutes)',
+              label: 'Durata predefinita (minuti)',
               controller: _durationController,
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 16),
             targetSelection(context),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(64.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                saveAppointmentType();
-                exit();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.tertiary,
-              ),
-              child: const Text('Save'),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Annulla'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    saveAppointmentType();
+                    exit();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Salva'),
+                ),
+              ],
             ),
           ],
         ),
@@ -131,7 +129,7 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
     return Column(
       children: [
         const SizedBox(height: 20),
-        const Text('Target'),
+        const Text('Destinatari'),
         const SizedBox(height: 10),
         Center(
           child: ToggleButtons(
@@ -153,15 +151,15 @@ class EditAppointmentTypePageState extends State<EditAppointmentTypePage> {
             children: const [
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text('Male'),
+                child: Text('Uomo'),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text('Female'),
+                child: Text('Donna'),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text('All'),
+                child: Text('Tutti'),
               ),
             ],
           ),

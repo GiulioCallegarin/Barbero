@@ -21,12 +21,15 @@ class _AppRouterState extends State<AppRouter> {
 
   List<BottomNavigationBarItem> get navBarItems {
     return const <BottomNavigationBarItem>[
-      BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Clients'),
+      BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Clienti'),
       BottomNavigationBarItem(
         icon: Icon(Icons.calendar_month),
-        label: 'Appointments',
+        label: 'Appuntamenti',
       ),
-      BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.settings),
+        label: 'Impostazioni',
+      ),
     ];
   }
 

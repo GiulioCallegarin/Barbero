@@ -31,6 +31,10 @@ class Appointment extends HiveObject {
   @HiveField(8)
   late AppointmentStatus status = AppointmentStatus.pending;
 
+  @HiveField(9)
+  /// Pause duration in minutes (tempo di posa). Can be 0..180.
+  late int pauseDurationMinutes = 0;
+
   Appointment({
     required this.id,
     required this.date,
@@ -41,6 +45,7 @@ class Appointment extends HiveObject {
     required this.duration,
     this.notes,
     this.status = AppointmentStatus.pending,
+    this.pauseDurationMinutes = 0,
   });
 
   static Future<int> getNextId() async {

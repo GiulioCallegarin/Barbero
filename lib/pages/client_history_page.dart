@@ -48,6 +48,15 @@ class ClientHistoryPageState extends State<ClientHistoryPage> {
     });
   }
 
+  void cancelAppointment(Appointment appt) {
+    setState(() {
+      appt.status = AppointmentStatus.cancelled;
+      appointmentsBox.put(appt.id, appt);
+      // recompute stats if needed
+      generateStats();
+    });
+  }
+
   void generateStats() {
     totalAppointments = appointments.length;
     if (totalAppointments > 0) {
@@ -82,6 +91,9 @@ class ClientHistoryPageState extends State<ClientHistoryPage> {
             appointments: appointments,
             toggleSortOrder: toggleSortOrder,
             isDescending: isDescending,
+            // In client profile we don't want a cancel button nor show total duration
+            onCancel: null,
+            showDuration: false,
           ),
         ],
       ),

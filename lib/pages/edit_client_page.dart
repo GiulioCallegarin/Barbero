@@ -65,7 +65,9 @@ class EditClientPageState extends State<EditClientPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.client == null ? 'Add Client' : 'Edit Client'),
+        title: Text(
+          widget.client == null ? 'Aggiungi cliente' : 'Modifica cliente',
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -81,7 +83,7 @@ class EditClientPageState extends State<EditClientPage> {
           children: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Annulla'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -91,7 +93,7 @@ class EditClientPageState extends State<EditClientPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
               ),
-              child: const Text('Save'),
+              child: const Text('Salva'),
             ),
           ],
         ),
@@ -103,14 +105,14 @@ class EditClientPageState extends State<EditClientPage> {
     return Column(
       spacing: 20,
       children: [
-        StyledTextField(label: 'First Name', controller: _firstNameController),
-        StyledTextField(label: 'Last Name', controller: _lastNameController),
+        StyledTextField(label: 'Nome', controller: _firstNameController),
+        StyledTextField(label: 'Cognome', controller: _lastNameController),
         StyledTextField(
-          label: 'Phone Number',
+          label: 'Telefono',
           controller: _phoneController,
           keyboardType: TextInputType.phone,
         ),
-        StyledTextField(label: 'Address', controller: _addressController),
+        StyledTextField(label: 'Indirizzo', controller: _addressController),
       ],
     );
   }
@@ -119,7 +121,7 @@ class EditClientPageState extends State<EditClientPage> {
     return Column(
       children: [
         const SizedBox(height: 20),
-        const Text('Gender'),
+        const Text('Genere'),
         const SizedBox(height: 10),
         Center(
           // Centering the ToggleButtons horizontally
@@ -144,7 +146,7 @@ class EditClientPageState extends State<EditClientPage> {
                 children: [
                   const Icon(Icons.man_outlined),
                   const SizedBox(width: 8.0),
-                  const Text('Male'),
+                  const Text('Uomo'),
                 ],
               ),
               Row(
@@ -152,7 +154,7 @@ class EditClientPageState extends State<EditClientPage> {
                 children: [
                   const Icon(Icons.woman_outlined),
                   const SizedBox(width: 8.0),
-                  const Text('Female'),
+                  const Text('Donna'),
                 ],
               ),
             ],

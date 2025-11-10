@@ -15,7 +15,7 @@ Future<dynamic> deleteItemDialog(
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Annulla'),
             ),
             TextButton(
               onPressed: () {
@@ -23,7 +23,7 @@ Future<dynamic> deleteItemDialog(
                 Navigator.pop(context);
               },
               child: Text(
-                'Delete',
+                'Elimina',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),

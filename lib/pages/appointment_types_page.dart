@@ -50,7 +50,7 @@ class _AppointmentTypesPageState extends State<AppointmentTypesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Appointment Types')),
+      appBar: AppBar(title: const Text('Tipi di servizio')),
       body: AppointmentTypesList(
         appointmentTypeBox: appointmentTypeBox,
         showEditAppointmentTypePage: showEditAppointmentTypePage,
