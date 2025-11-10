@@ -46,18 +46,22 @@ class CustomTimePicker extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
             ),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.12 * 255).round()),
+            ),
           ),
           child: Row(
             children: [
               Icon(
                 Icons.access_time,
-                color: Theme.of(context).colorScheme.inversePrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               const SizedBox(width: 10),
               Text(
                 '${selectedDate!.hour}:${selectedDate!.minute.toString().padLeft(2, '0')}',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.inversePrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],

@@ -41,19 +41,11 @@ class ClientStats extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       statTile('Appuntamenti totali', '$totalAppointments'),
-                      statTile(
-                        'Spesa media',
-                        '€${avgMoneySpent.toStringAsFixed(2)}',
-                      ),
                     ],
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      statTile(
-                        'Spesa totale',
-                        '€${totalMoneySpent.toStringAsFixed(2)}',
-                      ),
                       statTile(
                         'Media giorni tra',
                         '${avgTimeBetweenAppointments.toStringAsFixed(1)} giorni',

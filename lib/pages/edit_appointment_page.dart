@@ -476,8 +476,15 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
-              // Pause duration (tempo di posa) sliders
               Align(alignment: Alignment.centerLeft),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Tempo post servizio: ${pauseDurationMinutes ~/ 60}h ${pauseDurationMinutes % 60}m',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -612,7 +619,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                                     },
                                     decoratorProps: DropDownDecoratorProps(
                                       decoration: InputDecoration(
-                                        labelText: 'Select Type',
+                                        labelText: 'Seleziona Servizio',
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(
                                             10.0,
