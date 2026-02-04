@@ -1,12 +1,16 @@
 import 'package:barbero/models/appointment.dart';
 import 'package:barbero/models/appointment_type.dart';
 import 'package:barbero/models/client.dart';
+import 'package:barbero/models/sms_settings.dart';
 import 'package:barbero/widgets/appointments/custom_date_picker.dart';
 import 'package:barbero/widgets/appointments/custom_time_picker.dart';
 import 'package:barbero/widgets/styled_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class AddedService {
@@ -135,6 +139,107 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     return total;
   }
 
+  Future<void> sendSMS(Client client, DateTime date, String appointmentType) async {
+    try {
+      final settingsBox = Hive.box('settings');
+      final smsSettings = settingsBox.get('smsSettings') as SMSSettings?;
+      
+      // Se non c'è configurazione o è disabilitato, apri WhatsApp/SMS fallback
+      if (smsSettings == null || !smsSettings.enabled || smsSettings.gatewayUrl.isEmpty) {
+        await sendWhatsAppFallback(client, date, appointmentType);
+        return;
+      }
+
+      final dateFormatter = DateFormat('dd/MM/yyyy');
+      final timeFormatter = DateFormat('HH:mm');
+      final formattedDate = dateFormatter.format(date);
+      final formattedTime = timeFormatter.format(date);
+      
+      final message = 'Giulio Mani di forbice ti ricorda il tuo appuntamento il $formattedDate alle $formattedTime.\n\nNon rispondere a questo messaggio automatico, per modificare o cancellare chiami al ${smsSettings.senderNumber}';
+      
+      // Invia via SMS Gateway
+      await sendViaGateway(client.phoneNumber, message, smsSettings);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Errore nell\'invio messaggio: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> sendViaGateway(String phoneNumber, String message, SMSSettings settings) async {
+    try {
+      final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+      
+      // Formato generico per SMS Gateway (supporta la maggior parte delle app)
+      final Uri gatewayUri = Uri.parse(settings.gatewayUrl).replace(
+        queryParameters: {
+          'phone': cleanPhone,
+          'message': message,
+          'sender': settings.senderNumber,
+        },
+      );
+
+      final response = await http.get(gatewayUri).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => http.Response('Timeout', 500),
+      );
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Messaggio inviato con successo')),
+          );
+        }
+      } else {
+        throw Exception('Gateway ha risposto con errore: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Errore invio SMS Gateway: $e\n\nFallback a WhatsApp')),
+        );
+      }
+      // Fallback a WhatsApp se il gateway fallisce
+      if (mounted) {
+        final client = clientBox.get(selectedClientId!);
+        if (client != null) {
+          await sendWhatsAppFallback(client, DateTime.now(), '');
+        }
+      }
+    }
+  }
+
+  Future<void> sendWhatsAppFallback(Client client, DateTime date, String appointmentType) async {
+    try {
+      final dateFormatter = DateFormat('dd/MM/yyyy');
+      final timeFormatter = DateFormat('HH:mm');
+      final formattedDate = dateFormatter.format(date);
+      final formattedTime = timeFormatter.format(date);
+      
+      final message = 'Giulio Mani di forbice ti ricorda il tuo appuntamento il $formattedDate alle $formattedTime.\n\nNon rispondere a questo messaggio automatico, per modificare o cancellare chiami al +39 327 068 7817';
+      
+      String cleanPhone = client.phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+      
+      final Uri whatsappUri = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
+      
+      final Uri smsUri = Uri(
+        scheme: 'sms',
+        path: client.phoneNumber,
+        queryParameters: {'body': message},
+      );
+      
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(smsUri)) {
+        await launchUrl(smsUri);
+      }
+    } catch (e) {
+      // Silent fail per fallback
+    }
+  }
+
   void saveAppointment() {
     if (selectedClientId == null || selectedTypeId == null) {
       ScaffoldMessenger.of(
@@ -209,6 +314,9 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         servicesForNotes.addAll(addedServices.map((s) => s.toJson()));
         final data = {'services': servicesForNotes};
         appt.notes = jsonEncode(data);
+      } else {
+        // Clear notes if no services are added (revert to single service)
+        appt.notes = null;
       }
       appointmentBox.put(appt.id, appt);
     } else {
@@ -271,6 +379,12 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         newAppointment.notes = jsonEncode(data);
       }
       appointmentBox.put(newId, newAppointment);
+      
+      // Send SMS to client for new appointment
+      final client = clientBox.get(selectedClientId!);
+      if (client != null && client.phoneNumber.isNotEmpty) {
+        sendSMS(client, localDate, newAppointment.appointmentType);
+      }
     }
 
     Navigator.pop(context);
@@ -318,51 +432,70 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              DropdownSearch<int>(
-                selectedItem: selectedClientId,
-                items:
-                    (filter, infiniteScrollProps) =>
-                        clientBox.values.map((client) => client.id).toList(),
-                popupProps: PopupProps.menu(
+              DropdownSearch<Client>(
+                selectedItem: selectedClientId != null
+                    ? clientBox.values.firstWhere(
+                        (c) => c.id == selectedClientId,
+                        orElse: () => clientBox.values.isNotEmpty
+                            ? clientBox.values.first
+                            : Client(
+                                firstName: '',
+                                lastName: '',
+                                phoneNumber: '',
+                                address: '',
+                                gender: '',
+                              ),
+                      )
+                    : null,
+                items: (filter, infiniteScrollProps) {
+                  return clientBox.values.toList();
+                },
+                compareFn: (item1, item2) => item1.id == item2.id,
+                popupProps: PopupProps.modalBottomSheet(
                   showSelectedItems: true,
                   showSearchBox: true,
-                  itemBuilder: (context, item, isSelected, searchEntry) {
-                    final client = clientBox.values.firstWhere(
-                      (c) => c.id == item,
-                      orElse:
-                          () => Client(
-                            firstName: '',
-                            lastName: '',
-                            phoneNumber: '',
-                            address: '',
-                            gender: '',
-                          ),
-                    );
+                  modalBottomSheetProps: ModalBottomSheetProps(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    elevation: 6,
+                    useSafeArea: true,
+                  ),
+                  searchFieldProps: TextFieldProps(
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      labelText: 'Cerca cliente...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                  ),
+                  itemBuilder: (context, client, isSelected, searchEntry) {
                     return ListTile(
+                      dense: true,
                       title: Text('${client.firstName} ${client.lastName}'),
                       subtitle: Text(client.phoneNumber),
+                      selected: isSelected,
                     );
                   },
                 ),
-                onChanged: (value) {
+                filterFn: (client, filter) {
+                  if (filter.isEmpty) return true;
+                  final filterLower = filter.toLowerCase();
+                  final fullName =
+                      '${client.firstName} ${client.lastName}'.toLowerCase();
+                  final phone = client.phoneNumber.toLowerCase();
+                  return fullName.contains(filterLower) ||
+                      phone.contains(filterLower);
+                },
+                onChanged: (client) {
                   setState(() {
-                    selectedClientId = value;
+                    selectedClientId = client?.id;
                     selectedTypeId = null;
                     durationController.clear();
                   });
                 },
-                dropdownBuilder: (context, selectedItem) {
-                  final client = clientBox.values.firstWhere(
-                    (c) => c.id == selectedItem,
-                    orElse:
-                        () => Client(
-                          firstName: '',
-                          lastName: '',
-                          phoneNumber: '',
-                          address: '',
-                          gender: '',
-                        ),
-                  );
+                dropdownBuilder: (context, client) {
+                  if (client == null) return const Text('');
                   return Text('${client.firstName} ${client.lastName}');
                 },
                 decoratorProps: DropDownDecoratorProps(
@@ -777,6 +910,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                         onPressed: markAsCompleted,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -794,6 +928,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                         onPressed: deleteAppointment,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -834,6 +969,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),

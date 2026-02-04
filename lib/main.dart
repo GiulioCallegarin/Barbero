@@ -2,6 +2,7 @@ import 'package:barbero/app_router.dart';
 import 'package:barbero/models/appointment.dart';
 import 'package:barbero/models/appointment_type.dart';
 import 'package:barbero/models/client.dart';
+import 'package:barbero/models/sms_settings.dart';
 import 'package:barbero/theme/theme_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:syncfusion_localizations/syncfusion_localizations.dart';
@@ -30,6 +31,7 @@ Future<void> init() async {
   Hive.registerAdapter(AppointmentTypeAdapter());
   Hive.registerAdapter(AppointmentStatusAdapter());
   Hive.registerAdapter(AppointmentAdapter());
+  Hive.registerAdapter(SMSSettingsAdapter());
   await Hive.openBox<Client>('clients');
   await Hive.openBox<AppointmentType>('appointmentTypes');
   await Hive.openBox<Appointment>('appointments');

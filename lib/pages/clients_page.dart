@@ -65,8 +65,9 @@ class _ClientsPageState extends State<ClientsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Clienti'),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(20),
+          preferredSize: const Size.fromHeight(60),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -95,12 +96,54 @@ class _ClientsPageState extends State<ClientsPage> {
           ),
         ),
       ),
-      body: FilteredClientsList(
-        clientBox: clientBox,
-        searchQuery: searchQuery,
-        showEditClientPage: showEditClientPage,
-        deleteClient: deleteClient,
-        showClientHistory: showClientHistory,
+      body: ValueListenableBuilder(
+        valueListenable: clientBox.listenable(),
+        builder: (context, Box<Client> box, _) {
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.people,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Totale clienti: ${box.length}',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: FilteredClientsList(
+                  clientBox: clientBox,
+                  searchQuery: searchQuery,
+                  showEditClientPage: showEditClientPage,
+                  deleteClient: deleteClient,
+                  showClientHistory: showClientHistory,
+                ),
+              ),
+            ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showEditClientPage(),
