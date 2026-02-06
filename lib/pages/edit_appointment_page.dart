@@ -1,16 +1,12 @@
 import 'package:barbero/models/appointment.dart';
 import 'package:barbero/models/appointment_type.dart';
 import 'package:barbero/models/client.dart';
-import 'package:barbero/models/sms_settings.dart';
 import 'package:barbero/widgets/appointments/custom_date_picker.dart';
 import 'package:barbero/widgets/appointments/custom_time_picker.dart';
 import 'package:barbero/widgets/styled_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class AddedService {
@@ -139,106 +135,6 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
     return total;
   }
 
-  Future<void> sendSMS(Client client, DateTime date, String appointmentType) async {
-    try {
-      final settingsBox = Hive.box('settings');
-      final smsSettings = settingsBox.get('smsSettings') as SMSSettings?;
-      
-      // Se non c'è configurazione o è disabilitato, apri WhatsApp/SMS fallback
-      if (smsSettings == null || !smsSettings.enabled || smsSettings.gatewayUrl.isEmpty) {
-        await sendWhatsAppFallback(client, date, appointmentType);
-        return;
-      }
-
-      final dateFormatter = DateFormat('dd/MM/yyyy');
-      final timeFormatter = DateFormat('HH:mm');
-      final formattedDate = dateFormatter.format(date);
-      final formattedTime = timeFormatter.format(date);
-      
-      final message = 'Giulio Mani di forbice ti ricorda il tuo appuntamento il $formattedDate alle $formattedTime.\n\nNon rispondere a questo messaggio automatico, per modificare o cancellare chiami al ${smsSettings.senderNumber}';
-      
-      // Invia via SMS Gateway
-      await sendViaGateway(client.phoneNumber, message, smsSettings);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Errore nell\'invio messaggio: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> sendViaGateway(String phoneNumber, String message, SMSSettings settings) async {
-    try {
-      final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-      
-      // Formato generico per SMS Gateway (supporta la maggior parte delle app)
-      final Uri gatewayUri = Uri.parse(settings.gatewayUrl).replace(
-        queryParameters: {
-          'phone': cleanPhone,
-          'message': message,
-          'sender': settings.senderNumber,
-        },
-      );
-
-      final response = await http.get(gatewayUri).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => http.Response('Timeout', 500),
-      );
-
-      if (response.statusCode == 200) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Messaggio inviato con successo')),
-          );
-        }
-      } else {
-        throw Exception('Gateway ha risposto con errore: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Errore invio SMS Gateway: $e\n\nFallback a WhatsApp')),
-        );
-      }
-      // Fallback a WhatsApp se il gateway fallisce
-      if (mounted) {
-        final client = clientBox.get(selectedClientId!);
-        if (client != null) {
-          await sendWhatsAppFallback(client, DateTime.now(), '');
-        }
-      }
-    }
-  }
-
-  Future<void> sendWhatsAppFallback(Client client, DateTime date, String appointmentType) async {
-    try {
-      final dateFormatter = DateFormat('dd/MM/yyyy');
-      final timeFormatter = DateFormat('HH:mm');
-      final formattedDate = dateFormatter.format(date);
-      final formattedTime = timeFormatter.format(date);
-      
-      final message = 'Giulio Mani di forbice ti ricorda il tuo appuntamento il $formattedDate alle $formattedTime.\n\nNon rispondere a questo messaggio automatico, per modificare o cancellare chiami al +39 327 068 7817';
-      
-      String cleanPhone = client.phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-      
-      final Uri whatsappUri = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
-      
-      final Uri smsUri = Uri(
-        scheme: 'sms',
-        path: client.phoneNumber,
-        queryParameters: {'body': message},
-      );
-      
-      if (await canLaunchUrl(whatsappUri)) {
-        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
-      } else if (await canLaunchUrl(smsUri)) {
-        await launchUrl(smsUri);
-      }
-    } catch (e) {
-      // Silent fail per fallback
-    }
-  }
 
   void saveAppointment() {
     if (selectedClientId == null || selectedTypeId == null) {
@@ -380,11 +276,6 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       }
       appointmentBox.put(newId, newAppointment);
       
-      // Send SMS to client for new appointment
-      final client = clientBox.get(selectedClientId!);
-      if (client != null && client.phoneNumber.isNotEmpty) {
-        sendSMS(client, localDate, newAppointment.appointmentType);
-      }
     }
 
     Navigator.pop(context);
