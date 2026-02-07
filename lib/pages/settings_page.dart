@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:barbero/pages/appointment_types_page.dart';
+import 'package:barbero/services/data_backup_service.dart';
+import 'package:barbero/theme/theme_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:barbero/theme/theme_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -78,6 +84,125 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<void> _exportData() async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export disponibile solo su iPhone/iOS.'),
+        ),
+      );
+      return;
+    }
+    _showBusyDialog('Creazione backup...');
+    try {
+      final file = await DataBackupService.exportToFile();
+      if (!mounted) return;
+      _closeBusyDialog();
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Backup Barbero',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Backup creato e pronto da condividere')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _closeBusyDialog();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Errore export: $e')),
+      );
+    }
+  }
+
+  Future<void> _importData() async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Import disponibile solo su iPhone/iOS.'),
+        ),
+      );
+      return;
+    }
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      withData: false,
+    );
+    if (picked == null || picked.files.single.path == null) return;
+
+    final shouldImport = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Importa backup'),
+        content: const Text(
+          'L\'importazione sovrascrive tutti i dati attuali. Vuoi continuare?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annulla'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Importa'),
+          ),
+        ],
+      ),
+    );
+    if (shouldImport != true) return;
+
+    _showBusyDialog('Importazione in corso...');
+    try {
+      final file = File(picked.files.single.path!);
+      final result = await DataBackupService.importFromFile(file);
+      if (!mounted) return;
+      _closeBusyDialog();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Import completato: ${result.clientsCount} clienti, '
+            '${result.appointmentsCount} appuntamenti, '
+            '${result.appointmentTypesCount} tipi',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _closeBusyDialog();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Errore import: $e')),
+      );
+    }
+  }
+
+  void _showBusyDialog(String message) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Text(message)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _closeBusyDialog() {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,6 +230,19 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('Gestisci tipi di servizio'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () => showAppointmentTypesPage(context),
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text('Esporta dati'),
+            subtitle: const Text('Crea un file di backup dei dati'),
+            leading: const Icon(Icons.upload_file),
+            onTap: _exportData,
+          ),
+          ListTile(
+            title: const Text('Importa dati'),
+            subtitle: const Text('Ripristina da un file di backup'),
+            leading: const Icon(Icons.download_for_offline),
+            onTap: _importData,
           ),
         ],
       ),
