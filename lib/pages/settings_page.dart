@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:barbero/pages/appointment_types_page.dart';
 import 'package:universal_io/io.dart';
+import 'package:barbero/services/backup_sync_service.dart';
 import 'package:barbero/services/data_backup_service.dart';
 import 'package:barbero/theme/theme_provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -194,6 +195,71 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _restoreFromDrive() async {
+    if (!kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ripristino disponibile solo su PWA.')),
+      );
+      return;
+    }
+
+    final shouldRestore = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ripristina da Google Drive'),
+        content: const Text(
+          'Il ripristino sovrascrive tutti i dati attuali. Vuoi continuare?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annulla'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ripristina'),
+          ),
+        ],
+      ),
+    );
+    if (shouldRestore != true) return;
+
+    _showBusyDialog('Download in corso...');
+    try {
+      final data = await BackupSyncService.restoreFromDrive();
+      if (!mounted) return;
+      _closeBusyDialog();
+
+      if (data == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nessun backup trovato su Google Drive.')),
+        );
+        return;
+      }
+
+      _showBusyDialog('Importazione dati...');
+      final result = await DataBackupService.importFromPayload(data);
+      if (!mounted) return;
+      _closeBusyDialog();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Ripristino completato: ${result.clientsCount} clienti, '
+            '${result.appointmentsCount} appuntamenti, '
+            '${result.appointmentTypesCount} tipi',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _closeBusyDialog();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Errore ripristino: $e')),
+      );
+    }
+  }
+
   void _showBusyDialog(String message) {
     showDialog<void>(
       context: context,
@@ -261,6 +327,13 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: const Text('Ripristina da un file di backup'),
             leading: const Icon(Icons.download_for_offline),
             onTap: _importData,
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text('Ripristina da Google Drive'),
+            subtitle: const Text('Scarica e ripristina il backup dal Drive'),
+            leading: const Icon(Icons.cloud_download),
+            onTap: _restoreFromDrive,
           ),
         ],
       ),

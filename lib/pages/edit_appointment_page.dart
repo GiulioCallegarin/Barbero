@@ -1,13 +1,15 @@
+import 'dart:convert';
+
 import 'package:barbero/models/appointment.dart';
 import 'package:barbero/models/appointment_type.dart';
 import 'package:barbero/models/client.dart';
+import 'package:barbero/services/backup_sync_service.dart';
 import 'package:barbero/widgets/appointments/custom_date_picker.dart';
 import 'package:barbero/widgets/appointments/custom_time_picker.dart';
 import 'package:barbero/widgets/styled_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'dart:convert';
 
 class AddedService {
   int? typeId;
@@ -215,6 +217,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         appt.notes = null;
       }
       appointmentBox.put(appt.id, appt);
+      BackupSyncService.checkAndRunAutomaticBackup();
     } else {
       final newId =
           appointmentBox.isEmpty
@@ -275,7 +278,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         newAppointment.notes = jsonEncode(data);
       }
       appointmentBox.put(newId, newAppointment);
-      
+      BackupSyncService.checkAndRunAutomaticBackup();
     }
 
     Navigator.pop(context);
@@ -286,6 +289,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       setState(() {
         widget.appointment!.status = AppointmentStatus.done;
         appointmentBox.put(widget.appointment!.id, widget.appointment!);
+        BackupSyncService.checkAndRunAutomaticBackup();
       });
       Navigator.pop(context);
     }
@@ -296,6 +300,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       setState(() {
         widget.appointment!.status = AppointmentStatus.cancelled;
         appointmentBox.put(widget.appointment!.id, widget.appointment!);
+        BackupSyncService.checkAndRunAutomaticBackup();
       });
       Navigator.pop(context);
     }
@@ -304,6 +309,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
   void deleteAppointment() {
     if (widget.appointment != null) {
       appointmentBox.delete(widget.appointment!.id);
+      BackupSyncService.checkAndRunAutomaticBackup();
       Navigator.pop(context);
     }
   }

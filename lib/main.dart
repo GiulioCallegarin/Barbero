@@ -2,6 +2,7 @@ import 'package:barbero/app_router.dart';
 import 'package:barbero/models/appointment.dart';
 import 'package:barbero/models/appointment_type.dart';
 import 'package:barbero/models/client.dart';
+import 'package:barbero/services/backup_sync_service.dart';
 import 'package:barbero/theme/theme_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:syncfusion_localizations/syncfusion_localizations.dart';
@@ -19,6 +20,7 @@ void main() async {
       child: MyApp(),
     ),
   );
+  BackupSyncService.checkAndRunAutomaticBackup();
 }
 
 Future<void> init() async {

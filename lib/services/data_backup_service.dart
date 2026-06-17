@@ -48,6 +48,10 @@ class DataBackupService {
       throw const FormatException('Formato file non valido');
     }
     final data = Map<String, dynamic>.from(decoded as Map);
+    return importFromPayload(data);
+  }
+
+  static Future<DataImportResult> importFromPayload(Map<String, dynamic> data) async {
 
     final clients = _readList(data, 'clients')
         .map((e) => _clientFromJson(_castMap(e)))
