@@ -2,14 +2,13 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ] # o la tua branch principale (es. master)
-  workflow_dispatch: # Ti permette di avviarlo anche manualmente
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - os: ubuntu-latest
       - uses: actions/checkout@v4
 
       - name: Set up Java
