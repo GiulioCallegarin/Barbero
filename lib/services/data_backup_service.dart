@@ -1,6 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
+
+import 'package:flutter/foundation.dart';
+import 'package:universal_io/io.dart';
 
 import 'package:barbero/models/appointment.dart';
 import 'package:barbero/models/appointment_type.dart';
@@ -24,11 +26,12 @@ class DataBackupService {
   static const int exportVersion = 1;
   static const String filePrefix = 'barbero_backup_';
 
-  static Future<File> exportToFile() async {
+  static Future<File?> exportToFile() async {
+    if (kIsWeb) return null;
     final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
     final file = File('${dir.path}/$filePrefix$timestamp.json');
-    final payload = _buildExportPayload();
+    final payload = buildExportPayload();
     final json = const JsonEncoder.withIndent('  ').convert(payload);
     await file.writeAsString(json);
     return file;
@@ -36,6 +39,10 @@ class DataBackupService {
 
   static Future<DataImportResult> importFromFile(File file) async {
     final raw = await file.readAsString();
+    return importFromJsonString(raw);
+  }
+
+  static Future<DataImportResult> importFromJsonString(String raw) async {
     final decoded = jsonDecode(raw);
     if (decoded is! Map) {
       throw const FormatException('Formato file non valido');
@@ -86,7 +93,7 @@ class DataBackupService {
     );
   }
 
-  static Map<String, dynamic> _buildExportPayload() {
+  static Map<String, dynamic> buildExportPayload() {
     final clientsBox = Hive.box<Client>('clients');
     final appointmentTypesBox = Hive.box<AppointmentType>('appointmentTypes');
     final appointmentsBox = Hive.box<Appointment>('appointments');

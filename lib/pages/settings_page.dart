@@ -1,6 +1,8 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:barbero/pages/appointment_types_page.dart';
+import 'package:universal_io/io.dart';
 import 'package:barbero/services/data_backup_service.dart';
 import 'package:barbero/theme/theme_provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -85,23 +87,28 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _exportData() async {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Export disponibile solo su iPhone/iOS.'),
-        ),
-      );
-      return;
-    }
     _showBusyDialog('Creazione backup...');
     try {
-      final file = await DataBackupService.exportToFile();
-      if (!mounted) return;
-      _closeBusyDialog();
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Backup Barbero',
-      );
+      if (kIsWeb) {
+        final payload = DataBackupService.buildExportPayload();
+        final json = const JsonEncoder.withIndent('  ').convert(payload);
+        final bytes = utf8.encode(json);
+        if (!mounted) return;
+        _closeBusyDialog();
+        await Share.shareXFiles(
+          [XFile.fromData(Uint8List.fromList(bytes),
+              mimeType: 'application/json', name: 'barbero_backup.json')],
+          text: 'Backup Barbero',
+        );
+      } else {
+        final file = await DataBackupService.exportToFile();
+        if (!mounted) return;
+        _closeBusyDialog();
+        await Share.shareXFiles(
+          [XFile(file!.path)],
+          text: 'Backup Barbero',
+        );
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Backup creato e pronto da condividere')),
@@ -116,20 +123,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _importData() async {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Import disponibile solo su iPhone/iOS.'),
-        ),
-      );
-      return;
-    }
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['json'],
-      withData: false,
+      withData: kIsWeb,
     );
-    if (picked == null || picked.files.single.path == null) return;
+    if (picked == null) return;
+    if (!kIsWeb && picked.files.single.path == null) return;
 
     final shouldImport = await showDialog<bool>(
       context: context,
@@ -154,19 +154,37 @@ class _SettingsPageState extends State<SettingsPage> {
 
     _showBusyDialog('Importazione in corso...');
     try {
-      final file = File(picked.files.single.path!);
-      final result = await DataBackupService.importFromFile(file);
-      if (!mounted) return;
-      _closeBusyDialog();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Import completato: ${result.clientsCount} clienti, '
-            '${result.appointmentsCount} appuntamenti, '
-            '${result.appointmentTypesCount} tipi',
+      if (kIsWeb) {
+        final bytes = picked.files.single.bytes;
+        if (bytes == null) throw Exception('File vuoto');
+        final jsonString = utf8.decode(bytes);
+        final result = await DataBackupService.importFromJsonString(jsonString);
+        if (!mounted) return;
+        _closeBusyDialog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Import completato: ${result.clientsCount} clienti, '
+              '${result.appointmentsCount} appuntamenti, '
+              '${result.appointmentTypesCount} tipi',
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        final file = File(picked.files.single.path!);
+        final result = await DataBackupService.importFromFile(file);
+        if (!mounted) return;
+        _closeBusyDialog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Import completato: ${result.clientsCount} clienti, '
+              '${result.appointmentsCount} appuntamenti, '
+              '${result.appointmentTypesCount} tipi',
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       _closeBusyDialog();

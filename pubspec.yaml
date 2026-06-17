@@ -51,6 +51,7 @@ dependencies:
   path_provider: ^2.1.4
   file_picker: ^10.3.10
   share_plus: ^12.0.1
+  universal_io: ^2.2.2
 
 dev_dependencies:
   flutter_test:
