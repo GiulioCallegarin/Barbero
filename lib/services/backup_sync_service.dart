@@ -6,8 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class BackupSyncService {
-  static const String _googleScriptUrl = "INSERIRE_QUI_L_URL_DEL_PASSO_1";
-  static const String _securityToken = "ScegliUnaPasswordSicuraDellaPWA";
+  static const String _googleScriptUrl = "https://script.google.com/macros/s/AKfycbz7gHCyv_U0DjHNhANtZ8uvJwv6gGcQhMnWudKeCyD8pr0byCcRDAwCvU54TQYCdcDNpg/exec";
+  static const String _securityToken = "Ciao1234!";
 
   static Future<void> checkAndRunAutomaticBackup() async {
     if (!kIsWeb) return;
