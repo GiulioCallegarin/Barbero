@@ -10,6 +10,7 @@ import 'package:barbero/widgets/styled_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AddedService {
   int? typeId;
@@ -47,6 +48,12 @@ class EditAppointmentPage extends StatefulWidget {
 }
 
 class _EditAppointmentPageState extends State<EditAppointmentPage> {
+  bool get _isWhatsAppActive {
+    final now = DateTime.now();
+    final releaseTime = DateTime(2026, 6, 20, 7, 0);
+    return now.isAfter(releaseTime);
+  }
+
   late Box<Appointment> appointmentBox;
   late Box<Client> clientBox;
   late Box<AppointmentType> appointmentTypeBox;
@@ -138,20 +145,17 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
   }
 
 
-  void saveAppointment() {
+  bool _performSave() {
     if (selectedClientId == null || selectedTypeId == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Seleziona cliente e tipo')));
-      return;
+      return false;
     }
 
-    // price removed: store 0.0 (prices are not set at appointment creation)
     final price = 0.0;
-    // compute duration: if user added services, sum those durations, otherwise use typed duration or selected type default
     int duration = int.tryParse(durationController.text) ?? 0;
     if (addedServices.isNotEmpty) {
-      // include the main selected service (if any) plus all added services and their pauses
       duration = computeTotalDuration();
     } else if (selectedTypeId != null && duration == 0) {
       final sel = appointmentTypeBox.get(selectedTypeId);
@@ -166,9 +170,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       final appt = widget.appointment!;
       appt.date = localDate;
       appt.clientId = selectedClientId!;
-      // if multiple services were added, store a joined representation in appointmentType
       if (addedServices.isNotEmpty) {
-        // include main selected service as first element in the representation
         final List<String> names = [];
         if (selectedTypeId != null) {
           final main = appointmentTypeBox.get(selectedTypeId);
@@ -184,9 +186,8 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         appt.appointmentType = appointmentType?.name ?? '';
         appt.appointmentTypeId = selectedTypeId ?? 0;
       }
-      appt.price = price; // kept as 0.0
+      appt.price = price;
       appt.duration = duration;
-      // store sum of pauses: include main pauseDurationMinutes plus pauses from added services
       appt.pauseDurationMinutes =
           addedServices.isNotEmpty
               ? (pauseDurationMinutes +
@@ -194,10 +195,8 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                       .map((s) => s.pauseAfterMinutes)
                       .fold(0, (a, b) => a + b))
               : pauseDurationMinutes;
-      // serialize services into notes so calendar can reconstruct segments
       if (addedServices.isNotEmpty) {
         final servicesForNotes = <Map<String, dynamic>>[];
-        // include main selected service first (if any) with its pauseDurationMinutes
         if (selectedTypeId != null) {
           final main = appointmentTypeBox.get(selectedTypeId);
           if (main != null) {
@@ -213,7 +212,6 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
         final data = {'services': servicesForNotes};
         appt.notes = jsonEncode(data);
       } else {
-        // Clear notes if no services are added (revert to single service)
         appt.notes = null;
       }
       appointmentBox.put(appt.id, appt);
@@ -279,6 +277,51 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
       }
       appointmentBox.put(newId, newAppointment);
       BackupSyncService.checkAndRunAutomaticBackup();
+    }
+
+    return true;
+  }
+
+  void saveAppointment() {
+    if (!_performSave()) return;
+    Navigator.pop(context);
+  }
+
+  Future<void> saveAndSendWhatsApp() async {
+    if (!_performSave()) return;
+
+    final client = clientBox.get(selectedClientId);
+    final phone = client?.phoneNumber ?? '';
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Il cliente non ha un numero di telefono')),
+      );
+      Navigator.pop(context);
+      return;
+    }
+
+    final formattedPhone = formatItalianPhoneNumber(phone);
+    final typeName = selectedTypeId != null
+        ? (appointmentTypeBox.get(selectedTypeId)?.name ?? '')
+        : '';
+
+    final day = selectedDate.day.toString().padLeft(2, '0');
+    final month = selectedDate.month.toString().padLeft(2, '0');
+    final year = selectedDate.year.toString();
+    final hour = selectedDate.hour.toString().padLeft(2, '0');
+    final minute = selectedDate.minute.toString().padLeft(2, '0');
+
+    final text =
+        'Ciao ${client!.firstName}! Ti confermo l\'appuntamento per il giorno $day/$month/$year alle ore $hour:$minute. A presto!';
+    final encoded = Uri.encodeComponent(text);
+    final url = 'whatsapp-biz://send?phone=$formattedPhone&text=$encoded';
+
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      final fallbackUrl = 'https://wa.me/$formattedPhone?text=$encoded';
+      await launchUrl(Uri.parse(fallbackUrl),
+          mode: LaunchMode.externalApplication);
     }
 
     Navigator.pop(context);
@@ -348,14 +391,9 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                   return clientBox.values.toList();
                 },
                 compareFn: (item1, item2) => item1.id == item2.id,
-                popupProps: PopupProps.modalBottomSheet(
+                popupProps: PopupProps.menu(
                   showSelectedItems: true,
                   showSearchBox: true,
-                  modalBottomSheetProps: ModalBottomSheetProps(
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    elevation: 6,
-                    useSafeArea: true,
-                  ),
                   searchFieldProps: TextFieldProps(
                     autofocus: true,
                     decoration: InputDecoration(
@@ -874,10 +912,41 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                   child: const Text('Conferma', style: TextStyle(fontSize: 18)),
                 ),
               ),
+              if (_isWhatsAppActive) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: saveAndSendWhatsApp,
+                    icon: const Icon(Icons.send),
+                    label: const Text('Salva e Invia Conferma',
+                        style: TextStyle(fontSize: 16)),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
+}
+
+String formatItalianPhoneNumber(String input) {
+  String cleaned = input.replaceAll(RegExp(r'\D'), '');
+  if (cleaned.startsWith('0039')) {
+    cleaned = cleaned.substring(4);
+  }
+  if (cleaned.length <= 10) {
+    cleaned = '39$cleaned';
+  }
+  return cleaned;
 }
