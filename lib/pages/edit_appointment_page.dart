@@ -10,7 +10,7 @@ import 'package:barbero/widgets/styled_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:barbero/widgets/whatsapp_business_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AddedService {
   int? typeId;
@@ -278,28 +278,26 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
 
   void saveAppointment() {
     if (!_performSave()) return;
+    _openWhatsAppAfterSave();
     Navigator.pop(context);
   }
 
-  void _saveAndTriggerBackup() {
-    _performSave();
-  }
-
-  String? _whatsAppPhone() {
+  void _openWhatsAppAfterSave() {
     final client = clientBox.get(selectedClientId);
-    if (client == null || client.phoneNumber.isEmpty) return null;
-    return formatItalianPhoneNumber(client.phoneNumber);
-  }
+    if (client == null || client.phoneNumber.isEmpty) return;
 
-  String _whatsAppMessage() {
-    final client = clientBox.get(selectedClientId);
-    final name = client?.firstName ?? '';
+    final phone = formatItalianPhoneNumber(client.phoneNumber);
     final day = selectedDate.day.toString().padLeft(2, '0');
     final month = selectedDate.month.toString().padLeft(2, '0');
     final year = selectedDate.year.toString();
     final hour = selectedDate.hour.toString().padLeft(2, '0');
     final minute = selectedDate.minute.toString().padLeft(2, '0');
-    return "Ciao $name! Ti confermo l'appuntamento per il giorno $day/$month/$year alle ore $hour:$minute. A presto!";
+    final text =
+        "Ciao ${client.firstName}! Ti confermo l'appuntamento per il giorno $day/$month/$year alle ore $hour:$minute. A presto!";
+
+    final url =
+        'whatsapp-biz://send?phone=$phone&text=${Uri.encodeComponent(text)}';
+    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
   void markAsCompleted() {
@@ -887,29 +885,7 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                   child: const Text('Conferma', style: TextStyle(fontSize: 18)),
                 ),
               ),
-              if (_whatsAppPhone() != null) ...[
-                const SizedBox(height: 12),
-                WhatsAppBusinessButton(
-                  phoneNumber: _whatsAppPhone()!,
-                  message: _whatsAppMessage(),
-                  onSaved: _saveAndTriggerBackup,
-                  child: ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.phone_android),
-                    label: const Text('Salva e Invia Conferma Business',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF25D366),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+
             ],
           ),
         ),
