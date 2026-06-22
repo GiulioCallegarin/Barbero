@@ -277,27 +277,26 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
   }
 
   void saveAppointment() {
-    if (!_performSave()) return;
-    _openWhatsAppAfterSave();
-    Navigator.pop(context);
-  }
-
-  void _openWhatsAppAfterSave() {
     final client = clientBox.get(selectedClientId);
-    if (client == null || client.phoneNumber.isEmpty) return;
+    if (client != null && client.phoneNumber.isNotEmpty) {
+      final numeroPulito =
+          client.phoneNumber.replaceAll(RegExp(r'[\s+\-]'), '');
+      final day = selectedDate.day.toString().padLeft(2, '0');
+      final month = selectedDate.month.toString().padLeft(2, '0');
+      final year = selectedDate.year.toString();
+      final hour = selectedDate.hour.toString().padLeft(2, '0');
+      final minute = selectedDate.minute.toString().padLeft(2, '0');
+      final testo =
+          "Ciao ${client.firstName}! Ti confermo l'appuntamento per il giorno $day/$month/$year alle ore $hour:$minute. A presto!";
+      final testoCodificato = Uri.encodeComponent(testo);
+      launchUrl(
+        Uri.parse("https://wa.me/$numeroPulito?text=$testoCodificato"),
+        mode: LaunchMode.externalApplication,
+      );
+    }
 
-    final phone = formatItalianPhoneNumber(client.phoneNumber);
-    final day = selectedDate.day.toString().padLeft(2, '0');
-    final month = selectedDate.month.toString().padLeft(2, '0');
-    final year = selectedDate.year.toString();
-    final hour = selectedDate.hour.toString().padLeft(2, '0');
-    final minute = selectedDate.minute.toString().padLeft(2, '0');
-    final text =
-        "Ciao ${client.firstName}! Ti confermo l'appuntamento per il giorno $day/$month/$year alle ore $hour:$minute. A presto!";
-
-    final url =
-        'whatsapp-biz://send?phone=$phone&text=${Uri.encodeComponent(text)}';
-    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    _performSave();
+    Navigator.pop(context);
   }
 
   void markAsCompleted() {
@@ -894,13 +893,3 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
   }
 }
 
-String formatItalianPhoneNumber(String input) {
-  String cleaned = input.replaceAll(RegExp(r'\D'), '');
-  if (cleaned.startsWith('0039')) {
-    cleaned = cleaned.substring(4);
-  }
-  if (cleaned.length <= 10) {
-    cleaned = '39$cleaned';
-  }
-  return cleaned;
-}
