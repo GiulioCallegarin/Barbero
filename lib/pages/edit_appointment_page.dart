@@ -48,12 +48,6 @@ class EditAppointmentPage extends StatefulWidget {
 }
 
 class _EditAppointmentPageState extends State<EditAppointmentPage> {
-  bool get _isWhatsAppActive {
-    final now = DateTime.now();
-    final releaseTime = DateTime(2026, 6, 23, 7, 0);
-    return now.isAfter(releaseTime);
-  }
-
   late Box<Appointment> appointmentBox;
   late Box<Client> clientBox;
   late Box<AppointmentType> appointmentTypeBox;
@@ -893,25 +887,24 @@ class _EditAppointmentPageState extends State<EditAppointmentPage> {
                   child: const Text('Conferma', style: TextStyle(fontSize: 18)),
                 ),
               ),
-              if (_isWhatsAppActive && _whatsAppPhone() != null) ...[
+              if (_whatsAppPhone() != null) ...[
                 const SizedBox(height: 12),
                 WhatsAppBusinessButton(
                   phoneNumber: _whatsAppPhone()!,
                   message: _whatsAppMessage(),
                   onSaved: _saveAndTriggerBackup,
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.send),
-                      label: const Text('Salva e Invia Conferma',
-                          style: TextStyle(fontSize: 16)),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.phone_android),
+                    label: const Text('Salva e Invia Conferma Business',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
